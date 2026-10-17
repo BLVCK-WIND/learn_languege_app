@@ -46,7 +46,9 @@ erDiagram
         string pos "Từ loại: noun, verb, adj..."
         string ipa "Phiên âm IPA chuẩn"
         string audioUrl "Đường dẫn file audio local của từ"
-        string audioStatus "PENDING | READY | FAILED"
+        string audioStatus "PENDING | PROCESSING | READY | FAILED"
+        string audioUpdatedAt "Thời điểm cập nhật audio gần nhất"
+        int audioAttempts "Số lần đã thử tải audio (mặc định 0)"
         string createdAt "Thời điểm tạo"
         string updatedAt "Thời điểm cập nhật"
         string deletedAt "Thời điểm xóa mềm (null = hoạt động)"
@@ -68,7 +70,9 @@ erDiagram
         string targetForm "Dạng hiển thị của từ trong câu (tùy chọn)"
         string meaningVi "Dịch nghĩa tiếng Việt của câu"
         string audioUrl "Đường dẫn file audio local"
-        string audioStatus "PENDING | READY | FAILED"
+        string audioStatus "PENDING | PROCESSING | READY | FAILED"
+        string audioUpdatedAt "Thời điểm cập nhật audio gần nhất"
+        int audioAttempts "Số lần đã thử tải audio (mặc định 0)"
         string contentHash "sha256(normalized text)"
         string createdAt "Thời điểm tạo"
     }
@@ -160,9 +164,12 @@ erDiagram
 ### 2.4. Thực thể `Word` (Kho Từ vựng) & `WordMeaning` (Nghĩa Từ vựng)
 - **Thực thể `Word`:**
   - **Khóa định danh tự nhiên:** `@@unique([normalizedWord, pos])`.
-  - `normalizedWord`: Chuỗi viết thường, trim, chuẩn Unicode NFC.
-  - `pos`: Bắt buộc (`noun`, `verb`, `adj`, `adv`, `phrase`, `preposition`, `conjunction`).
-  - `audioUrl` & `audioStatus`: Quản lý file phát âm riêng cho từ vựng (`PENDING | READY | FAILED`).
+  - `normalizedWord`: Chuỗi viết thường, trim, gộp khoảng trắng thừa (`\s+` → `' '`), chuẩn Unicode NFC.
+  - `pos`: Bắt buộc (`noun`, `verb`, `adj`, `adv`, `phrase`, `preposition`, `conjunction`, `pronoun`, `determiner`, `interjection`).
+  - `audioUrl`: Đường dẫn phục vụ file audio phát âm của từ (ví dụ: `/api/audio/[hash].mp3`).
+  - `audioStatus`: Quản lý tiến trình tải audio (`'PENDING' | 'PROCESSING' | 'READY' | 'FAILED'`).
+  - `audioUpdatedAt`: Thời điểm cập nhật trạng thái audio gần nhất (ISO-8601 UTC).
+  - `audioAttempts`: Số lần đã thử tải audio (mặc định `0`, tăng dần khi retry).
   - `deletedAt`: Quản lý xóa mềm (`DateTime?`).
 - **Thực thể `WordMeaning`:**
   - Tách nghĩa tiếng Việt thành bảng 1-N liên kết với `Word.id` (`ON DELETE CASCADE`).
@@ -171,10 +178,15 @@ erDiagram
 
 ### 2.5. Thực thể `Sentence` (Câu Ví dụ, Audio & Dạng từ Đục lỗ)
 - **Mục đích:** Lưu trữ câu ví dụ cho từ vựng.
-- **Trường `targetForm` (tùy chọn):** Lưu dạng chữ chính xác của từ vựng xuất hiện trong câu (ví dụ: từ vựng gốc là *achieve*, nhưng trong câu xuất hiện ở dạng quá khứ *achieved* hoặc phân từ *achieving*). Trường này phục vụ trực tiếp cho thẻ ôn tập đục lỗ (Cloze Deletion) ở Lát 2b. Nếu không có `targetForm` hoặc không tìm thấy chuỗi trong `text`, hệ thống sẽ tự động rơi về chế độ ôn tập nhận diện hoặc hồi tưởng.
+- **Trường `targetForm` (tùy chọn):** Lưu dạng chữ chính xác của từ vựng xuất hiện trong câu (ví dụ: từ vựng gốc là *achieve*, nhưng trong câu xuất hiện ở dạng quá khứ *achieved* hoặc phân từ *achieving*). Phục vụ trực tiếp cho thẻ ôn tập đục lỗ (Cloze Deletion) ở Lát 2b. Nếu không có hoặc không khớp chuỗi trong `text`, tự động rơi về Chế độ 1 hoặc 2.
 - **Khóa chống trùng:** `@@unique([wordId, contentHash])`.
-  - **Lý do:** Một câu văn hay có thể dùng làm ví dụ đồng thời cho nhiều từ vựng khác nhau. Do đó ràng buộc trùng lặp gắn theo cặp `(wordId, contentHash)`.
+  - **Lý do:** Một câu văn hay có thể dùng làm ví dụ đồng thời cho nhiều từ vựng khác nhau.
   - **Tối ưu file audio:** File âm thanh sinh ra vẫn chỉ lưu **duy nhất 1 file** trên ổ đĩa tại `/data/audio/[sha256].mp3` nhờ đặt tên theo hash nội dung.
+- **Quản lý âm thanh câu:**
+  - `audioUrl`: Đường dẫn audio local của câu ví dụ.
+  - `audioStatus`: Trạng thái tải âm thanh (`'PENDING' | 'PROCESSING' | 'READY' | 'FAILED'`).
+  - `audioUpdatedAt`: Thời điểm cập nhật trạng thái audio gần nhất.
+  - `audioAttempts`: Số lần đã thử tải audio (mặc định `0`).
 
 ### 2.6. Thực thể `Mistake` (Nhật ký Lỗi sai & Định nghĩa Số lần mắc)
 - **Khóa chống trùng:** `contentHash` mang ràng buộc `@unique` (tính trên cặp câu sai + đúng đã chuẩn hóa).
