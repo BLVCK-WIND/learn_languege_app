@@ -1,104 +1,154 @@
 # ĐẶC TẢ CÔNG NGHỆ (TECH STACK SPECIFICATION)
 
 ## 1. Danh mục Công nghệ & Phiên bản Ghim Cứng (Pinned Versions)
-*(Các phiên bản dưới đây đã được kiểm tra thực tế từ npm registry và môi trường máy trạm ngày 17/10/2026)*
 
-| Công nghệ / Thư viện | Phiên bản ghim | Vai trò | Lý do lựa chọn kỹ thuật |
-| :--- | :--- | :--- | :--- |
-| **Node.js** | `v22.19.0` (LTS) | Runtime môi trường máy | Phiên bản Active LTS hiện hành trên máy local, tối ưu hiệu năng V8, hỗ trợ đầy đủ ESM và Web standard APIs. |
-| **TypeScript** | `^5.6.0` | Ngôn ngữ phát triển | Đảm bảo tính Type-safe nghiêm ngặt (`strict: true`), chia sẻ type 100% giữa tầng Service, Model và Giao diện. |
-| **Next.js** | `16.4.2` (App Router) | Full-stack Web Framework | Phiên bản ổn định mới nhất; tích hợp sẵn Route Handlers, Server Components, tối ưu streaming và routing local-first. |
-| **Prisma ORM** | `7.10.1` | Truy cập dữ liệu (ORM) | Bản phát hành ổn định (Stable) cao nhất trước v8-rc; hỗ trợ hoàn hảo SQLite, migration có thể kiểm soát và Prisma Client type-safe. |
-| **Zod** | `4.6.7` | Schema Validation | Bản stable mới nhất; kiểm thực cấu trúc JSON import, dữ liệu DTO và đảm bảo an toàn kiểu dữ liệu runtime. |
-| **Vitest** | `5.0.5` | Framework kiểm thử tự động | Tốc độ chạy cực nhanh trên Vite engine, hỗ trợ ESM/TypeScript native, tương thích 1:1 với cú pháp Jest, hỗ trợ Table-driven tests mạnh mẽ. |
-| **Styling** | CSS Modules + CSS Variables | Giao diện người dùng | Xem chi tiết tại Mục 6 bên dưới. |
+Các phiên bản dưới đây được kiểm tra trực tiếp từ npm registry và lịch phát hành chính thức của Node.js vào ngày 17/10/2026. Tất cả các gói đều ghim phiên bản chính xác (không dùng ký tự `^` hay `~`), cam kết commit file `package-lock.json` và cài đặt môi trường bằng lệnh `npm ci` để đảm bảo tính tái lập (reproducibility).
+
+### 1.1. Lựa chọn phiên bản Node.js Runtime
+- **Kiểm tra lịch phát hành (nodejs/Release):**
+  - Node 22 (Jod): Chuyển sang Maintenance LTS từ ngày 21/10/2025 (kết thúc hỗ trợ 30/04/2027).
+  - Node 24 (Krypton): Bản Active LTS chính thức từ 28/10/2025 đến 20/10/2026, tiếp tục Maintenance đến 30/04/2028.
+  - Node 26: Lên lịch LTS vào 28/10/2026.
+- **Quyết định:** Chọn **Node 24 (Active LTS)** vì đây là phiên bản có sự tương thích rộng và ổn định cao giữa các công nghệ:
+  - Next.js 16.4.2 yêu cầu `engines: { node: '>=20.9.0' }`.
+  - Prisma 7.10.1 khai báo rõ ràng trong engines: `{ node: '^22.18.0 || ^24.11.0 || >=26.0.0' }`.
+  - `better-sqlite3` 13.0.3 yêu cầu `engines: { node: '>=22' }`.
+- **Khai báo môi trường:**
+  - File `.nvmrc`: `24`
+  - Khai báo trong `package.json`:
+    ```json
+    "engines": {
+      "node": ">=24.11.0"
+    }
+    ```
+  *(Ghi chú môi trường dev: Máy hiện tại đang cài `v22.19.0`, phiên bản này vẫn thỏa mãn `^22.18.0` của Prisma để chạy thử nghiệm, nhưng khuyến nghị nâng cấp lên Node 24 theo chuẩn dự án).*
 
 ---
 
-## 2. Kiến trúc Phân tầng & Quy ước Thư mục
+### 1.2. Bảng phiên bản chính xác và bằng chứng kiểm tra (npm view)
 
-### 2.1. Cấu trúc thư mục chuẩn
+| Gói / Thư viện | Phiên bản ghim | Bằng chứng kiểm tra (`npm view`) | Vai trò trong hệ thống |
+| :--- | :--- | :--- | :--- |
+| **next** | `16.4.2` | `npm view next version` → `16.4.2` | Full-stack framework (App Router, Server Actions, Route Handlers) |
+| **prisma** | `7.10.1` | `npm view prisma version` → `7.10.1` | CLI quản lý migrations và sinh mã Prisma Client |
+| **@prisma/client** | `7.10.1` | `npm view @prisma/client version` → `7.10.1` | Type-safe ORM Client |
+| **@prisma/adapter-better-sqlite3** | `7.10.1` | `npm view @prisma/adapter-better-sqlite3 version` → `7.10.1` | Driver adapter kết nối Prisma 7 với better-sqlite3 |
+| **better-sqlite3** | `13.0.3` | `npm view better-sqlite3 version` → `13.0.3` | Thư viện C++ binding SQLite đồng bộ, tốc độ cao cho Node.js |
+| **zod** | `4.6.7` | `npm view zod version` → `4.6.7` | Kiểm thực schema JSON import và DTO đầu vào |
+| **vitest** | `5.0.5` | `npm view vitest version` → `5.0.5` | Framework kiểm thử tự động dạng bảng |
+| **typescript** | `7.0.2` | `npm view typescript version` → `7.0.2` | Trình biên dịch ngôn ngữ tĩnh (`strict: true`) |
+| **tsx** | `4.23.15` | `npm view tsx version` → `4.23.15` | Trình thực thi TypeScript cho script bảo trì / migration |
+| **dotenv** | `18.0.8` | `npm view dotenv version` → `18.0.8` | Nạp biến môi trường cho các script độc lập |
+| **@types/node** | `26.6.5` | `npm view @types/node version` → `26.6.5` | Type definitions cho Node runtime |
+| **@types/better-sqlite3** | `9.6.0` | `npm view @types/better-sqlite3 version` → `9.6.0` | Type definitions cho better-sqlite3 |
+| **@types/react** | `19.3.0` | `npm view @types/react version` → `19.3.0` | Type definitions cho React |
+| **@types/react-dom** | `19.3.0` | `npm view @types/react-dom version` → `19.3.0` | Type definitions cho React DOM |
+
+---
+
+## 2. Quy tắc Dữ liệu Cá nhân (Public Repository Safety)
+
+Vì repository được lưu trữ công khai trên GitHub (`BLVCK-WIND/learn_languege_app`), nguyên tắc bất khả xâm phạm về an toàn dữ liệu cá nhân được quy định như sau:
+
+1. **Phân vùng dữ liệu thật:** Toàn bộ dữ liệu phát sinh trong quá trình học tập thực tế (file cơ sở dữ liệu SQLite `*.db`, file âm thanh `*.mp3`, các bản sao lưu `backups/`, và file JSON xuất) **chỉ được phép lưu trữ trong thư mục `data/`** tại thư mục gốc của dự án.
+2. **Quy tắc `.gitignore` nghiêm ngặt:** Thư mục `data/`, các định dạng `*.db`, `*.sqlite`, `*.sqlite-journal`, cùng các file môi trường `.env*` bị cấm đưa lên git.
+3. **Mẫu và Kiểm thử:** 
+   - Dữ liệu phục vụ kiểm thử tự động (tests) chỉ sử dụng dữ liệu giả lập được đặt trong `tests/fixtures/`.
+   - Cấu hình môi trường chỉ commit file mẫu `env.example`. Tuyệt đối không commit các file cấu hình chứa đường dẫn thực tế hay thông tin cá nhân.
+
+---
+
+## 3. Cấu trúc Thư mục & Quy ước Phân tầng
+
+### 3.1. Cây thư mục dự án
 ```text
 learn_languege_app/
-├── docs/                   # Toàn bộ tài liệu đặc tả kiến trúc (Spec)
+├── docs/                   # Tài liệu đặc tả kiến trúc (Spec)
 ├── prisma/
-│   ├── schema.prisma       # Lược đồ cơ sở dữ liệu SQLite
-│   └── migrations/         # Lịch sử các bản migration
-├── scripts/                # Script bảo trì, sao lưu, migration viết bằng Node.js
-│   ├── backup.ts           # Sao lưu an toàn bằng VACUUM INTO
-│   └── migrate.ts          # Bộ bao bọc an toàn trước khi chạy prisma migrate
+│   ├── schema.prisma       # Lược đồ cơ sở dữ liệu
+│   └── migrations/         # Lịch sử migrations (chạy qua script)
+├── prisma.config.ts        # Cấu hình Prisma 7 (khai báo adapter)
+├── scripts/                # Script Node.js đa nền tảng (chạy bằng tsx)
+│   ├── backup.ts           # Sao lưu SQLite bằng VACUUM INTO
+│   └── migrate.ts          # Bộ bao bọc tự động sao lưu trước khi migrate
 ├── src/
 │   ├── app/                # Next.js App Router (Giao diện & Route Handlers)
-│   │   ├── api/            # API Route Handlers (chỉ nhận request, gọi service)
-│   │   ├── import/         # Trang Import JSON
-│   │   ├── vocab/          # Trang Thư viện từ vựng
-│   │   ├── mistakes/       # Trang Nhật ký lỗi sai
-│   │   ├── review/         # Trang Ôn tập SRS Flashcard
-│   │   └── dashboard/      # Trang Thống kê IELTS
-│   ├── components/         # UI Components tái sử dụng (kèm file .module.css)
-│   ├── lib/                # Tiện ích cốt lõi & hàm thuần (Pure Functions)
-│   │   ├── prisma.ts       # Singleton Prisma Client
-│   │   ├── study-day.ts    # Module duy nhất tính ngày học (UTC+7, mốc 04:00)
-│   │   ├── crypto/         # Hàm băm chuẩn hóa (Sentence & Mistake hashes)
+│   │   ├── api/            # API Route Handlers (mỏng, chỉ gọi Service)
+│   │   ├── import/         # Màn hình Import JSON
+│   │   ├── vocab/          # Màn hình Thư viện từ vựng
+│   │   ├── mistakes/       # Màn hình Nhật ký lỗi sai
+│   │   ├── review/         # Màn hình Ôn tập SRS Flashcard
+│   │   └── dashboard/      # Màn hình Thống kê IELTS
+│   ├── components/         # UI Components tái sử dụng (kèm .module.css)
+│   ├── styles/
+│   │   └── tokens.css      # Design tokens tập trung (CSS Variables)
+│   ├── lib/                # Hàm thuần (Pure Functions) & Tiện ích
+│   │   ├── prisma.ts       # Singleton PrismaClient tích hợp adapter better-sqlite3
+│   │   ├── study-day.ts    # Module cô lập tính ngày học (UTC+7, mốc 04:00)
+│   │   ├── crypto/         # Thuật toán băm chuẩn hóa (Sentence & Mistake)
 │   │   └── srs/            # Thuật toán Modified SM-2 (Pure functions)
-│   ├── services/           # Nghiệp vụ lõi (Business Logic & Transactions)
+│   ├── services/           # Nghiệp vụ lõi (Transactions, điều phối đa hình)
 │   │   ├── import.service.ts
 │   │   ├── review.service.ts
 │   │   ├── vocab.service.ts
 │   │   └── backup.service.ts
 │   └── types/              # Định nghĩa Types & Zod Schemas
-├── data/                   # Nằm ngoài public (bị .gitignore bỏ qua)
-│   ├── app.db              # File SQLite chính
+├── tests/
+│   ├── fixtures/           # Dữ liệu giả lập phục vụ kiểm thử
+│   ├── srs.test.ts         # Table-driven test cho Scheduler
+│   └── import.test.ts      # Test tính idempotent của Import
+├── data/                   # [BẢO VỆ .gitignore] Lưu dữ liệu thực tế
+│   ├── app.db              # File SQLite thật
 │   ├── backups/            # Bản sao lưu SQLite (.db) và JSON export
-│   └── audio/              # File mp3 tải về từ DictionaryAPI / edge-tts
-└── tests/                  # Bộ kiểm thử tự động (Unit & Integration tests)
+│   └── audio/              # File mp3 tải về
+├── .env.example            # Mẫu biến môi trường (an toàn commit)
+├── .gitignore              # Chặn rò rỉ dữ liệu cá nhân
+└── .nvmrc                  # Khai báo phiên bản Node 24
 ```
 
-### 2.2. Quy ước phân tầng nghiêm ngặt (Layer Conventions)
-1. **Route Handlers (`src/app/api/...`):**
-   - Chỉ đảm nhận: Parse HTTP request, kiểm thực dữ liệu đầu vào qua Zod schema, gọi hàm tương ứng tại tầng Service, trả về HTTP response với status code chuẩn.
-   - **Tuyệt đối không chứa logic nghiệp vụ** và không gọi trực tiếp các câu lệnh Prisma phức tạp tại đây.
-2. **Service Layer (`src/services/...`):**
-   - Nơi tập trung toàn bộ quy tắc nghiệp vụ, điều phối transaction đa bảng (ví dụ: tạo đồng thời `Word` + `ReviewState` + `SessionItem`).
-   - Đảm bảo tính toàn vẹn dữ liệu cho mô hình đa hình.
+### 3.2. Quy ước phân tầng
+1. **Route Handlers (`src/app/api/...`):** Chỉ đảm nhận tiếp nhận HTTP request, parse body bằng Zod, chuyển lời gọi sang tầng Service tương ứng và trả về HTTP response. Không nhúng logic nghiệp vụ và không thực hiện truy vấn cơ sở dữ liệu trực tiếp tại đây.
+2. **Service Layer (`src/services/...`):** Nơi xử lý toàn bộ logic nghiệp vụ, thực thi giao dịch nguyên tử (`$transaction`), duy trì tính toàn vẹn cho mô hình `ReviewState` đa hình.
 3. **Pure Logic Modules (`src/lib/...`):**
-   - **SRS Scheduler:** Thiết kế như một pure function `calculateNextReview(currentState, rating, now: Date)`. Không truy cập DB, không đọc biến môi trường, không tự gọi `Date.now()`.
-   - **Hashing Module:** Hàm thuần `hashSentence(text: string)` và `hashMistake(wrong: string, correct: string)`.
+   - Hàm thuần: Các hàm tính toán như `calculateNextReview` hay hàm băm chuỗi không phụ thuộc DB, không gọi `Date.now()`, nhận đủ tham số đầu vào và trả về kết quả xác định.
 
 ---
 
-## 3. Công cụ Kiểm thử & Phương pháp Table-driven Testing
+## 4. Công cụ Kiểm thử & Table-driven Testing (Vitest 5.0.5)
 
-### 3.1. Framework kiểm thử: Vitest 5.0.5
-- **Lý do chọn:** Tích hợp liền mạch với TypeScript mà không cần cấu hình phức tạp qua `ts-jest` hay Babel; hỗ trợ ESM native; thời gian khởi động và chạy test dưới 1 giây.
-- **Thực thi:** Cấu hình trong `package.json`: `"test": "vitest run"`, `"test:watch": "vitest"`.
+### 4.1. Lý do lựa chọn Vitest
+- Tương thích tự nhiên với TypeScript và ESM mà không cần qua các lớp biên dịch phức tạp như `ts-jest`.
+- Cú pháp tương thích với hệ sinh thái Jest (`describe`, `it`, `expect`), hỗ trợ phương thức `test.each` trực quan cho kiểm thử dạng bảng.
 
-### 3.2. Tiêu chuẩn viết Table-driven Tests
-Mọi kiểm thử thuật toán (đặc biệt là SRS và Logic ngày học) bắt buộc viết theo mẫu ma trận kịch bản rõ ràng:
+### 4.2. Mẫu kiểm thử dạng bảng (Minh họa cấu trúc)
+*(Lưu ý: Các giá trị số dưới đây chỉ mang tính chất minh họa cấu trúc test; các hằng số chính thức về mức tăng/giảm Ease Factor và số ngày Interval sẽ được quy định cụ thể tại `docs/SRS_ALGORITHM.md`)*
 
 ```typescript
-// Ví dụ cấu trúc test dạng bảng chuẩn trong Vitest
-describe('SRS Scheduler - Modified SM-2 Matrix', () => {
+import { describe, test, expect } from 'vitest';
+import { calculateNextReview } from '@/lib/srs/scheduler';
+
+describe('SRS Scheduler - Modified SM-2 Table-driven Tests', () => {
   const scenarios = [
     {
-      name: 'Thẻ mới đánh giá Nhớ rõ -> interval = 1, EF tăng nhẹ',
-      input: { repetitions: 0, interval: 0, easeFactor: 2.5, rating: 'REMEMBERED' },
+      name: 'Thẻ mới đánh giá Nhớ rõ -> interval khởi tạo, EF tăng nhẹ',
+      input: { repetitions: 0, interval: 0, easeFactor: 2.5, rating: 'REMEMBERED' as const },
       expected: { interval: 1, repetitions: 1, easeFactor: 2.6 }
     },
     {
       name: 'Thẻ đánh giá Khó nhớ -> interval tăng tối thiểu 1 ngày (làm tròn lên)',
-      input: { repetitions: 2, interval: 1, easeFactor: 2.5, rating: 'HARD' },
-      expected: { interval: 2, easeFactor: 2.35 } // ceil(1 * 1.2) = 2
+      input: { repetitions: 2, interval: 1, easeFactor: 2.5, rating: 'HARD' as const },
+      expected: { interval: 2, easeFactor: 2.35 }
     },
     {
-      name: 'Thẻ bị Quên -> reset interval về 1, giảm EF, không dưới sàn 1.3',
-      input: { repetitions: 5, interval: 14, easeFactor: 1.35, rating: 'FORGOTTEN' },
+      name: 'Thẻ bị Quên -> reset interval về 1, giảm EF, không tụt dưới sàn 1.3',
+      input: { repetitions: 5, interval: 14, easeFactor: 1.35, rating: 'FORGOTTEN' as const },
       expected: { interval: 1, repetitions: 0, easeFactor: 1.30 }
     }
   ];
 
   test.each(scenarios)('$name', ({ input, expected }) => {
-    const result = scheduleCard(input, new Date('2026-10-17T10:00:00Z'));
+    const fixedNow = new Date('2026-10-17T10:00:00Z');
+    const result = calculateNextReview(input, fixedNow);
     expect(result.interval).toBe(expected.interval);
     expect(result.easeFactor).toBeCloseTo(expected.easeFactor, 2);
   });
@@ -107,110 +157,144 @@ describe('SRS Scheduler - Modified SM-2 Matrix', () => {
 
 ---
 
-## 4. Module Độc lập Tính "Ngày Học" (Study Day Calculator)
+## 5. Module Tính "Ngày Học" (Study Day Calculator)
 
-### 4.1. Quy tắc thời gian
-- **Múi giờ áp dụng:** Giờ Việt Nam (`Asia/Ho_Chi_Minh` = UTC+7 cố định quanh năm, Việt Nam không có quy ước giờ mùa hè - Daylight Saving Time).
-- **Mốc đổi ngày học (Cutoff threshold):** **04:00:00 AM**.
-  - Ví dụ: Một phiên học lúc `02:30 AM ngày 18/10/2026 (UTC+7)` vẫn được ghi nhận thuộc ngày học `17/10/2026`.
-  - Phiên học từ `04:00 AM ngày 18/10/2026 (UTC+7)` trở đi mới chuyển sang ngày học `18/10/2026`.
+### 5.1. Thuật toán số học UTC thuần túy
+Để loại bỏ sự phụ thuộc vào múi giờ của máy trạm (local machine timezone), hàm tính ngày học sử dụng phép tịnh tiến số học trực tiếp trên timestamp UTC:
+- Múi giờ Việt Nam: UTC+7 (`+7` giờ).
+- Mốc chuyển ngày học: 04:00 sáng (`-4` giờ).
+- Độ lệch thời gian ròng: `+7 - 4 = +3` giờ (`+3 * 3600 * 1000` ms).
 
-### 4.2. Thiết kế module cô lập (`src/lib/study-day.ts`)
 ```typescript
-const VIETNAM_OFFSET_HOURS = 7;
-const DAY_CUTOFF_HOUR = 4; // 04:00 sáng
+// src/lib/study-day.ts
+const NET_OFFSET_MS = (7 - 4) * 3600 * 1000; // +3 giờ = 10,800,000 ms
 
 /**
- * Trả về chuỗi ngày học chuẩn YYYY-MM-DD theo giờ VN với mốc đổi ngày 04:00
- * @param date Thời điểm cần tính (mặc định là thời điểm hiện tại)
+ * Trả về chuỗi ngày học YYYY-MM-DD theo giờ VN với mốc đổi ngày 04:00 AM.
+ * Hoàn toàn không phụ thuộc vào múi giờ cài đặt trên máy người dùng.
  */
 export function getStudyDate(date: Date = new Date()): string {
-  // Dịch chuyển thời gian: trừ đi 4 giờ để mốc 04:00 tương đương mốc 00:00 của ngày
-  // và cộng độ lệch UTC+7
-  const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-  const vnTime = new Date(utc + (VIETNAM_OFFSET_HOURS * 3600000));
-  
-  // Trừ 4 tiếng để tính ngày logic
-  vnTime.setHours(vnTime.getHours() - DAY_CUTOFF_HOUR);
-  
-  const year = vnTime.getFullYear();
-  const month = String(vnTime.getMonth() + 1).padStart(2, '0');
-  const day = String(vnTime.getDate()).padStart(2, '0');
+  const shifted = new Date(date.getTime() + NET_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(shifted.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 ```
-*Ghi chú: Toàn bộ hệ thống (truy vấn danh sách thẻ đến hạn `dueDate`, lưu vết phiên `SessionItem`) đều bắt buộc gọi hàm này, không phân tán logic xử lý ngày giờ ở các nơi khác.*
+
+### 5.2. Bảng kiểm thử đối soát mốc thời gian (Test Matrix)
+
+| Thời điểm đầu vào (UTC) | Tương đương giờ VN (UTC+7) | Ngày học kỳ vọng (`YYYY-MM-DD`) | Ghi chú kiểm thử |
+| :--- | :--- | :--- | :--- |
+| `2026-10-17T20:59:59Z` | `2026-10-18 03:59:59` | `2026-10-17` | Ngay trước mốc 04:00 sáng (vẫn thuộc ngày học cũ) |
+| `2026-10-17T21:00:00Z` | `2026-10-18 04:00:00` | `2026-10-18` | Đúng mốc 04:00 sáng (chuyển sang ngày học mới) |
+| `2026-12-31T20:59:59Z` | `2027-01-01 03:59:59` | `2026-12-31` | Đêm giao thừa trước 04:00 sáng (vẫn thuộc năm cũ) |
+| `2026-12-31T21:00:00Z` | `2027-01-01 04:00:00` | `2027-01-01` | Đúng 04:00 sáng ngày đầu năm mới (chuyển năm mới) |
 
 ---
 
-## 5. Kịch bản Sao lưu & Migration An toàn bằng Node.js
+## 6. Cơ chế Kết nối Prisma 7 với SQLite & Kiểm tra Khóa Ngoại
 
-### 5.1. Script thực thi đa nền tảng (`scripts/migrate.ts`)
-- Nghiêm cấm chạy trực tiếp lệnh `npx prisma migrate dev` trên terminal nhằm phòng ngừa tai nạn mất dữ liệu.
-- Thay vào đó, toàn bộ quy trình được đóng gói vào script Node.js (chạy được cả trên Windows PowerShell và Linux):
-  ```bash
-  npm run db:migrate
-  ```
+### 6.1. Khởi tạo PrismaClient với Adapter `better-sqlite3`
+Trong Prisma 7, kết nối tới SQLite thông qua driver adapter yêu cầu truyền một instance `Database` đã được cấu hình:
 
-### 5.2. Nguyên lý kỹ thuật của `VACUUM INTO` ngoài Transaction
-- **Hạn chế của SQLite:** Lệnh `VACUUM INTO 'filepath'` sẽ **báo lỗi ngay lập tức** nếu được gọi bên trong một transaction đang hoạt động (`cannot VACUUM from within a transaction`).
-- **Cách xử lý chuẩn:**
-  1. Script chạy bằng Node.js khởi tạo một instance Prisma Client riêng biệt.
-  2. Đảm bảo ứng dụng đang ở trạng thái rảnh (không có tác vụ import hay review đang ghi dở).
-  3. Chạy `VACUUM INTO` trực tiếp ở mức root của client:
-     ```typescript
-     // Chạy NGOÀI $transaction
-     const backupPath = path.join(process.cwd(), 'data/backups', `pre_migration_${timestamp}.db`);
-     await prisma.$executeRawUnsafe(`VACUUM INTO '${backupPath.replace(/'/g, "''")}'`);
-     ```
-  4. Sau khi file backup được tạo thành công trên đĩa, script mới dùng `child_process.execSync` gọi lệnh `prisma migrate deploy`.
+```typescript
+// src/lib/prisma.ts
+import Database from 'better-sqlite3';
+import { PrismaBetterSqlite } from '@prisma/adapter-better-sqlite3';
+import { PrismaClient } from '@prisma/client';
+import path from 'node:path';
 
-### 5.3. Xác minh hành vi Khóa ngoại (Foreign Keys) của SQLite với Prisma
-- **Khẳng định qua kiểm tra thực tế:** Prisma Query Engine khi kết nối tới SQLite mặc định **tự động gửi lệnh `PRAGMA foreign_keys = ON;`** cho mỗi connection trong connection pool.
-- **Biện pháp phòng thủ:** Trong script khởi động và các bài kiểm thử cơ sở dữ liệu, ứng dụng luôn chạy truy vấn xác minh:
+const dbPath = path.join(process.cwd(), 'data', 'app.db');
+const db = new Database(dbPath);
+
+// BẮT BUỘC: Kích hoạt thủ công ràng buộc khóa ngoại trên kết nối better-sqlite3
+db.pragma('foreign_keys = ON;');
+
+const adapter = new PrismaBetterSqlite(db);
+export const prisma = new PrismaClient({ adapter });
+```
+
+### 6.2. Kiểm tra thực tế hành vi Khóa ngoại (Foreign Keys)
+- **Thực tế kiểm tra:** Driver adapter `@prisma/adapter-better-sqlite3` bản `7.10.1` chỉ bọc kết nối JS do người dùng cung cấp và **không tự động gửi lệnh kích hoạt khóa ngoại**. Nếu phía ứng dụng không chạy `db.pragma('foreign_keys = ON;')`, SQLite có thể không kiểm soát ràng buộc khóa ngoại.
+- **Biện pháp bắt buộc:** Trong script khởi động ứng dụng và script kiểm tra CSDL, thực hiện kiểm tra trạng thái khóa ngoại và ghi log:
   ```typescript
-  const result = await prisma.$queryRaw<Array<{ foreign_keys: number }>>`PRAGMA foreign_keys;`;
-  if (!result || result[0]?.foreign_keys !== 1) {
-    throw new Error('CẢNH BÁO: SQLite Foreign Keys chưa được kích hoạt!');
+  const fkStatus = db.pragma('foreign_keys', { simple: true });
+  if (fkStatus !== 1) {
+    throw new Error('LỖI NGHIÊM TRỌNG: SQLite Foreign Keys chưa được kích hoạt thành công!');
   }
   ```
+- **Nhiệm vụ đầu Lát 1:** Tiến hành cài đặt thử nghiệm gói `better-sqlite3` trên môi trường Windows của người dùng để xác nhận trình biên dịch C++ (hoặc prebuilt binary) hoạt động bình thường trước khi xây dựng schema.
 
 ---
 
-## 6. Quyết định Phong cách Giao diện: CSS Modules + Vanilla CSS Variables
+## 7. Quy trình Sao lưu Bằng `VACUUM INTO` & Chính sách Lưu trữ
 
-- **Lựa chọn:** **CSS Modules kết hợp hệ thống CSS Variables (Design Tokens)**.
-- **Lý do lựa chọn kỹ thuật:**
-  1. *Không phụ thuộc build-tool cồng kềnh:* Không cần cài đặt TailwindCSS hay preprocessor (Sass/Less), loại bỏ hoàn toàn nguy cơ xung đột phiên bản Tailwind v3/v4.
-  2. *Scoped Styling chống tràn class:* Mỗi component (ví dụ `Flashcard.tsx`) có một file `Flashcard.module.css` đi kèm. CSS class được hash tự động ở build-time, loại bỏ 100% rủi ro đè style toàn cục.
-  3. *Hệ thống Design Tokens chuẩn chỉnh:* Toàn bộ màu sắc, typography (Google Font Inter/Outfit), bo góc, đổ bóng và khoảng cách được định nghĩa tập trung tại `src/styles/tokens.css` bằng CSS Variables (`--color-primary`, `--font-sans`, `--radius-md`). Hỗ trợ Dark Mode cực kỳ nhẹ nhàng thông qua việc đổi attribute trên thẻ `<html>`.
+### 7.1. Chạy `VACUUM INTO` ngoài Transaction
+SQLite nghiêm cấm thực thi lệnh `VACUUM INTO` khi đang có transaction mở. Script sao lưu (`scripts/backup.ts`) thực hiện sao lưu trực tiếp trên instance cơ sở dữ liệu ở trạng thái rảnh:
+
+```typescript
+// scripts/backup.ts
+import Database from 'better-sqlite3';
+import path from 'node:path';
+import fs from 'node:fs';
+
+export function createDatabaseBackup(prefix: string = 'backup'): string {
+  const dbPath = path.join(process.cwd(), 'data', 'app.db');
+  const backupDir = path.join(process.cwd(), 'data', 'backups');
+  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupFile = path.join(backupDir, `${prefix}_${timestamp}.db`);
+
+  const db = new Database(dbPath);
+  // Thực thi lệnh VACUUM INTO trực tiếp khi không có transaction
+  db.prepare(`VACUUM INTO ?`).run(backupFile);
+  db.close();
+
+  return backupFile;
+}
+```
+
+### 7.2. Chính sách Lưu trữ Bản sao lưu (Retention Policy)
+- **Bản sao lưu hằng ngày:** Giữ lại các bản sao lưu trong 14 ngày gần nhất. Các bản cũ hơn 14 ngày sẽ được script tự động dọn dẹp để tiết kiệm dung lượng ổ cứng.
+- **Bản sao lưu hằng tháng:** Giữ lại 1 bản snapshot vào ngày đầu tiên của mỗi tháng trong suốt chu kỳ học 12 tháng.
+- **Bản sao lưu trước Migration (`pre_migration_*.db`):** Lưu trữ vĩnh viễn toàn bộ các bản sao lưu tạo ra trước mỗi lần chạy migration CSDL.
+- **Phương án sao lưu ngoài máy tính (Off-machine backup):** Cung cấp tài liệu hướng dẫn trỏ đường dẫn lưu trữ phụ tới thư mục đồng bộ đám mây cá nhân (Google Drive / OneDrive / Dropbox) hoặc thiết lập private git bundle riêng biệt ngoài repo chính.
 
 ---
 
-## 7. Ghi chú về Âm thanh `edge-tts` (Kiểm thử tại Lát 4)
-- **Định hướng:** Sử dụng thư viện Node.js thuần (giao tiếp trực tiếp qua WebSocket tới Azure Speech endpoint), bọc sau interface trừu tượng:
-  ```typescript
-  export interface TtsProvider {
-    synthesizeSpeech(text: string, voice: string, rate: string): Promise<Buffer>;
-  }
+## 8. Giao diện Người dùng & Chiến lược Font Chống Mất Mạng
+
+### 8.1. Lý do lựa chọn CSS Modules + CSS Variables thay vì TailwindCSS
+1. **Tránh biến động phiên bản và phụ thuộc công cụ:** TailwindCSS có sự chuyển dịch lớn về cú pháp cấu hình giữa v3 (`tailwind.config.js`, `@tailwind`, PostCSS) và v4 (biên dịch bằng Vite/Rust, `@import "tailwindcss"`), tiềm ẩn rủi ro phát sinh lỗi cấu hình trong quá trình bảo trì 12 tháng.
+2. **Nâng cao năng lực kỹ thuật nền tảng:** Sử dụng CSS thuần với CSS Modules giúp củng cố kiến thức chuẩn về mô hình hộp (Box Model), thứ bậc ưu tiên (Specificity) và CSS Custom Properties.
+3. **Mã nguồn giao diện gọn gàng:** Tránh các chuỗi class tiện ích inline quá dài trong các component có logic hiển thị phức tạp như Flashcard 2 mặt hay bảng đối soát câu đúng/sai.
+
+### 8.2. Hệ thống Font tự phục vụ (Self-hosted Fonts)
+Để đảm bảo khả năng ôn tập hoàn toàn ổn định khi thiết bị không có kết nối internet:
+- Sử dụng module `next/font/google` để tự động tải các font chữ (như Inter hoặc Outfit) về máy cục bộ ngay ở thời điểm build (`next build`). Trình duyệt của người dùng sẽ nạp font trực tiếp từ server local, không thực hiện bất kỳ truy vấn nào ra ngoài máy đến máy chủ Google Fonts khi đang chạy.
+- Khai báo hệ thống font dự phòng (System Font Fallback) trong `src/styles/tokens.css`:
+  ```css
+  --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   ```
-- **Chưa ghim phiên bản ngay:** Việc rà soát độ ổn định, số lượng issue mở và ngày phát hành gần nhất của các gói npm (`edge-tts-node` hoặc tương đương) sẽ được thực hiện tại **Lát 4**. Ở Lát 1 và Lát 2, toàn bộ âm thanh sẽ chạy qua **Web Speech API** của trình duyệt.
 
 ---
 
-## 8. Câu hỏi còn mở (Open Questions)
-1. **Kiểm tra khả năng tương thích của Next.js 16 với các tiện ích chạy script:** Xác minh xem việc chạy script bảo trì `scripts/migrate.ts` bằng `tsx` (TypeScript Execute) có gặp xung đột với cấu hình module của Next.js 16 trên Node 22 hay không.
-2. **Quy định số lượng bản sao lưu SQLite lưu trữ tối đa:** Cần cơ chế dọn dẹp các file `.db` sao lưu cũ hơn 30 ngày trong thư mục `data/backups/` để tránh đầy dung lượng ổ cứng sau 12 tháng sử dụng.
+## 9. Câu hỏi còn mở (Open Questions)
+
+1. **Định dạng lưu trữ trường `dueDate` trong cơ sở dữ liệu:** Nên lưu dưới dạng chuỗi ngày học cục bộ `YYYY-MM-DD` (để query trực tiếp theo kết quả của `getStudyDate`) hay lưu dưới dạng timestamp UTC ISO-8601 (để đảm bảo chuẩn thời gian quốc tế). Sẽ quyết định cụ thể tại `docs/DATABASE_SCHEMA.md`.
+2. **Khả năng tương thích của `tsx` với Next.js 16 trên Node 24:** Kiểm tra xem lệnh chạy script bảo trì `npx tsx scripts/migrate.ts` có gặp cảnh báo module nào khi Next.js 16 dùng cấu hình ESM mặc định.
 
 ---
 
-## 9. Nhật ký Quyết định (Decision Log / ADR)
+## 10. Nhật ký Quyết định (Decision Log / ADR)
 
 | Ngày | Quyết định | Lý do kỹ thuật | Phương án đã loại |
 | :--- | :--- | :--- | :--- |
-| **2026-10-17** | **Ghim Prisma 7.10.1 & Node 22.19.0 LTS.** | Đảm bảo tính ổn định tối đa cho môi trường production; tránh các bản Release Candidate chưa ổn định (Prisma v8-rc). | Dùng phiên bản mới nhất không ghim (`latest` tự do) gây rủi ro vỡ code khi cài đặt lại. |
-| **2026-10-17** | **Vitest 5.0.5 cho Table-driven tests.** | Chạy nhanh, native TypeScript và ESM; cú pháp test dạng bảng trực quan, minh bạch cho thuật toán SM-2. | Jest (cồng kềnh khi cấu hình ESM + TypeScript với Next.js); kiểm thử thủ công không đo lường được. |
-| **2026-10-17** | **Phân lập logic "Ngày học" vào `src/lib/study-day.ts`.** | Giờ VN không có DST nhưng cần một điểm duy nhất để kiểm soát mốc đổi ngày 04:00 sáng; dễ dàng viết unit test giả lập thời gian. | Viết phân tán `new Date()` rải rác trong các route handlers và service. |
-| **2026-10-17** | **Script sao lưu Node.js + `VACUUM INTO` ngoài transaction.** | Tương thích cả Windows và Linux; `VACUUM INTO` cho file backup nhất quán 100% nhưng bắt buộc chạy ngoài `$transaction`. | Viết bash script (không chạy được mặc định trên Windows Command Prompt/PowerShell); sao chép file `.db` trực tiếp (dễ hỏng file nếu SQLite đang ghi). |
-| **2026-10-17** | **CSS Modules + CSS Custom Properties (Variables).** | Giữ mã nguồn thuần chuẩn Web standard; scoped styling không lo đụng độ class; dễ tùy biến theme mà không cần build step bên ngoài. | TailwindCSS (dễ gặp xung đột cấu hình PostCSS và khác biệt cú pháp v3/v4); CSS-in-JS (runtime overhead cao). |
-| **2026-10-17** | **Hoãn ghim package `edge-tts` đến Lát 4; bọc sau `TtsProvider`.** | Tập trung đưa app vào sử dụng sớm với Web Speech API ở Lát 2; interface trừu tượng giúp việc tích hợp sau này không chạm vào code nghiệp vụ. | Cài đặt và tích hợp `edge-tts` ngay từ đầu (làm chậm tiến độ đưa app vào học thực tế). |
+| **2026-10-17** | **Ghim Node 24 (Active LTS) trong engines và .nvmrc.** | Bản Active LTS ổn định, được Next.js 16, Prisma 7 và better-sqlite3 hỗ trợ chính thức. | Dùng Node 22 (đã vào Maintenance LTS) hoặc Node 26 (chưa chính thức LTS). |
+| **2026-10-17** | **Ghim cứng phiên bản chính xác cho toàn bộ dependencies.** | Loại bỏ ký tự `^`, cam kết `package-lock.json` và dùng `npm ci` để đảm bảo môi trường không bị thay đổi bất ngờ. | Dùng dải phiên bản lỏng lẻo (`^` hoặc `~`). |
+| **2026-10-17** | **Prisma 7 với Adapter `better-sqlite3` và lệnh `foreign_keys = ON;` tường minh.** | Tận dụng driver C++ tốc độ cao; kiểm soát minh bạch việc bật ràng buộc khóa ngoại ở tầng driver thay vì phó mặc giả định. | Sử dụng SQLite driver mặc định cũ của Prisma không qua adapter. |
+| **2026-10-17** | **Hàm `getStudyDate` tính bằng số học UTC (+3 giờ).** | Loại bỏ 100% rủi ro phụ thuộc vào múi giờ cài đặt của máy trạm; kết quả tính toán độc lập và nhất quán trên mọi môi trường. | Dùng `Date.prototype.getHours()` phụ thuộc múi giờ máy local. |
+| **2026-10-17** | **Quy tắc cô lập dữ liệu thật vào `data/` và `.gitignore`.** | Đảm bảo an toàn tuyệt đối khi public mã nguồn lên GitHub; chỉ commit dữ liệu giả lập trong `fixtures/`. | Lưu DB rải rác hoặc commit file DB chứa lịch sử học tập cá nhân lên repo public. |
+| **2026-10-17** | **CSS Modules + Tokens thay vì TailwindCSS.** | Tránh phụ thuộc vào công cụ tiền xử lý, tránh rủi ro vỡ cấu hình giữa Tailwind v3 và v4, giữ code CSS chuẩn mực. | Dùng TailwindCSS hoặc các thư viện CSS-in-JS có chi phí runtime. |

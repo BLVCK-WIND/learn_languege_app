@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing & Coverage
+coverage/
+
+# Next.js & Build outputs
+.next/
+out/
+build/
+dist/
+
+# Quy tắc Dữ liệu Cá nhân (Public Repository Safety)
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+
+# Environment Variables (Chỉ commit .env.example)
+.env*
+!.env.example
+
+# Audio cache & local media
+*.mp3
+*.wav
+
+# Logs & OS metadata
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
