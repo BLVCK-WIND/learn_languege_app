@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import styles from './import.module.css';
 import type { DryRunReport, ImportResult } from '@/types/import';
+import type { BackupRestoreSummary } from '@/types/backup';
 
 const SAMPLE_FIXTURE = `{
   "schemaVersion": 1,
@@ -80,6 +81,78 @@ export default function ImportPage() {
 
   // Conflict handling choice: 'SUGGESTED_SEQ' | 'APPEND'
   const [conflictResolution, setConflictResolution] = useState<'SUGGESTED_SEQ' | 'APPEND'>('SUGGESTED_SEQ');
+
+  // Full Backup & Restore states
+  const [isExporting, setIsExporting] = useState(false);
+  const [restorePayload, setRestorePayload] = useState('');
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<BackupRestoreSummary | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+
+  const handleExportBackup = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch('/api/backup/export');
+      if (!res.ok) throw new Error('Không thể tải file sao lưu');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `learn_language_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi khi xuất sao lưu');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text === 'string') {
+        setRestorePayload(text);
+        setRestoreError(null);
+        setRestoreResult(null);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmRestore = async () => {
+    if (!restorePayload.trim()) return;
+    setIsRestoring(true);
+    setRestoreError(null);
+    setRestoreResult(null);
+    try {
+      const res = await fetch('/api/backup/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: restorePayload,
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setRestoreResult(json.data);
+        setShowRestoreModal(false);
+        setRestorePayload('');
+      } else {
+        setRestoreError(json.error || 'Lỗi khôi phục CSDL');
+        setShowRestoreModal(false);
+      }
+    } catch {
+      setRestoreError('Không thể kết nối đến máy chủ để khôi phục');
+      setShowRestoreModal(false);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   const handleLoadSample = () => {
     setRawPayload(SAMPLE_FIXTURE);
@@ -431,6 +504,116 @@ export default function ImportPage() {
             </button>
           </div>
         </section>
+      )}
+
+      {/* Full Database Backup & Restore Section */}
+      <section className={styles.card} style={{ marginTop: 'var(--space-8)' }}>
+        <h2 className={styles.cardTitle}>
+          <span>📦 Sao lưu & Khôi phục Toàn vẹn CSDL (Full Backup & Restore)</span>
+        </h2>
+        <p className={styles.subtitle} style={{ marginBottom: 'var(--space-4)' }}>
+          Xuất toàn bộ CSDL 11 bảng ra file JSON bảo toàn 100% CUID2 và các quan hệ đa hình, hoặc khôi phục dữ liệu an toàn.
+        </p>
+
+        {restoreResult && (
+          <div className={`${styles.alert} ${styles.alertSuccess}`} style={{ marginBottom: 'var(--space-4)' }}>
+            <h4 style={{ margin: '0 0 var(--space-2) 0' }}>Khôi phục Toàn vẹn Dữ liệu Thành công! 🎉</h4>
+            <p style={{ margin: 0 }}>
+              Đã khôi phục tổng cộng <strong>{restoreResult.totalRecordsRestored}</strong> bản ghi từ file sao lưu JSON:
+            </p>
+            <ul className={styles.list}>
+              <li>Từ vựng ({restoreResult.wordsCount}), Nghĩa ({restoreResult.wordMeaningsCount}), Câu ví dụ ({restoreResult.sentencesCount})</li>
+              <li>Lỗi sai ({restoreResult.mistakesCount}), Buổi học ({restoreResult.sessionsCount}), Lịch sử ({restoreResult.sessionItemsCount})</li>
+              <li>Trạng thái SRS ({restoreResult.reviewStatesCount}), Nhật ký ôn tập ({restoreResult.reviewLogsCount})</li>
+            </ul>
+          </div>
+        )}
+
+        {restoreError && (
+          <div className={`${styles.alert} ${styles.alertError}`} style={{ marginBottom: 'var(--space-4)' }}>
+            <strong>Lỗi khôi phục:</strong> {restoreError}
+          </div>
+        )}
+
+        <div className={styles.backupGrid}>
+          {/* Export Box */}
+          <div className={styles.backupBox}>
+            <div>
+              <h3 className={styles.backupBoxTitle}>1. Xuất file sao lưu (Export JSON)</h3>
+              <p className={styles.backupBoxDesc}>
+                Tải về toàn bộ cơ sở dữ liệu hiện tại thành một file <code>.json</code> nguyên vẹn để lưu trữ ngoài máy tính hoặc chuyển thiết bị.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+              onClick={handleExportBackup}
+              disabled={isExporting}
+            >
+              {isExporting ? 'Đang tạo bản sao lưu...' : '⬇️ Tải file sao lưu JSON'}
+            </button>
+          </div>
+
+          {/* Restore Box */}
+          <div className={styles.backupBox}>
+            <div>
+              <h3 className={styles.backupBoxTitle}>2. Khôi phục từ file sao lưu (Restore JSON)</h3>
+              <p className={styles.backupBoxDesc}>
+                Chọn file <code>.json</code> sao lưu đã xuất trước đó để khôi phục lại toàn bộ dữ liệu học tập.
+              </p>
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <input
+                  type="file"
+                  accept=".json"
+                  className={styles.fileInput}
+                  onChange={handleFileUpload}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              className={`${styles.button} ${styles.buttonDanger}`}
+              onClick={() => setShowRestoreModal(true)}
+              disabled={!restorePayload.trim() || isRestoring}
+            >
+              {isRestoring ? 'Đang khôi phục...' : '⚠️ Bắt đầu Khôi phục CSDL'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Restore Confirmation Modal */}
+      {showRestoreModal && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalContent}>
+            <h3 className={styles.modalTitle}>⚠️ Cảnh báo Khôi phục Cơ sở Dữ liệu</h3>
+            <p className={styles.modalBody}>
+              Hành động này sẽ <strong>xóa sạch toàn bộ dữ liệu hiện tại</strong> trong cơ sở dữ liệu và thay thế bằng dữ liệu từ bản sao lưu JSON được chọn.
+              <br /><br />
+              Toàn bộ từ vựng, câu ví dụ, sổ tay lỗi và lịch sử ôn tập SRS sẽ được hoàn nguyên chính xác theo bản sao lưu.
+              <br /><br />
+              <strong>Bạn có chắc chắn muốn tiếp tục không?</strong>
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                onClick={() => setShowRestoreModal(false)}
+                disabled={isRestoring}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.buttonDanger}`}
+                onClick={handleConfirmRestore}
+                disabled={isRestoring}
+              >
+                {isRestoring ? 'Đang xử lý...' : 'Xác nhận Khôi phục Ngay'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

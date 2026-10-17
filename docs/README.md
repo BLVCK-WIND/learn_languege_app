@@ -112,7 +112,7 @@ Bảng dưới đây là kim chỉ nam tiến độ cho toàn bộ dự án. Khi
 - [x] **Task 2a.1:** Giao diện Thư viện Từ vựng (`/vocab`) và Nhật ký Lỗi sai (`/mistakes`) kèm điều kiện lọc xóa mềm `where: { deletedAt: null }`.
 - [x] **Task 2a.2:** Flashcard Ôn tập 3 nút (*Quên / Khó nhớ / Nhớ rõ*) với bộ tính toán toán học thuần túy Modified SM-2 (`calculateNextReview`).
 - [x] **Task 2a.3:** Tích hợp phát âm trình duyệt Web Speech API (chờ nạp danh sách giọng `en-US`, ưu tiên giọng `localService` khi offline).
-- [ ] **Task 2a.4:** Xây dựng `src/services/backup.service.ts` hỗ trợ API Xuất / Nhập khôi phục toàn vẹn JSON và viết bộ kiểm thử khứ hồi Round-trip (`tests/backup.test.ts`).
+- [x] **Task 2a.4:** Xây dựng `src/services/backup.service.ts` hỗ trợ API Xuất / Nhập khôi phục toàn vẹn JSON và viết bộ kiểm thử khứ hồi Round-trip (`tests/backup.test.ts`).
 
 ### 📋 Lát 2b: Trải nghiệm SRS Nâng cao, Thẻ Gõ Lỗi, Đục lỗ Cloze & Quota (~2 buổi)
 - [ ] **Task 2b.1:** Thẻ Mistake nâng cao (mặt trước bắt buộc gõ lại câu đúng, so khớp diff highlight trực quan phân biệt hoa/thường và dấu câu).
