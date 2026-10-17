@@ -21,6 +21,8 @@ export default function ReviewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [studyDate, setStudyDate] = useState('');
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isEndedEarly, setIsEndedEarly] = useState(false);
   const [cardStartTime, setCardStartTime] = useState<number>(Date.now());
   const typingInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -32,6 +34,13 @@ export default function ReviewPage() {
       if (json.success && json.data) {
         setCards(json.data.cards);
         setStudyDate(json.data.studyDate);
+        setSessionId(json.data.sessionId || null);
+        if (typeof json.data.currentIndex === 'number') {
+          setCurrentIndex(json.data.currentIndex);
+        }
+        if (typeof json.data.completedCount === 'number') {
+          setCompletedCount(json.data.completedCount);
+        }
         setCardStartTime(Date.now());
       }
     } catch (error) {
@@ -100,6 +109,7 @@ export default function ReviewPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            sessionId,
             reviewStateId: currentCard.reviewStateId,
             rating,
             reviewDurationMs: durationMs,
@@ -108,11 +118,29 @@ export default function ReviewPage() {
 
         const json = await res.json();
         if (json.success) {
+          // If a card was re-queued in the active session, append it to cards state
+          if (json.data?.session?.items && json.data.session.items.length > cards.length) {
+            const lastItem = json.data.session.items[json.data.session.items.length - 1];
+            setCards((prev) => [
+              ...prev,
+              {
+                ...currentCard,
+                requeueCount: lastItem.requeueCount,
+                hasLapsedInSession: lastItem.hasLapsedInSession,
+              },
+            ]);
+          }
+
+          if (typeof json.data?.session?.completedCount === 'number') {
+            setCompletedCount(json.data.session.completedCount);
+          } else {
+            setCompletedCount((prev) => prev + 1);
+          }
+
           setIsFlipped(false);
           setUserAttempt('');
           setSelectedWordMode(null);
           setCurrentIndex((prev) => prev + 1);
-          setCompletedCount((prev) => prev + 1);
           setCardStartTime(Date.now());
         } else {
           alert(json.error || 'Lỗi khi lưu kết quả ôn tập');
@@ -124,8 +152,34 @@ export default function ReviewPage() {
         setSubmitting(false);
       }
     },
-    [currentCard, submitting, cardStartTime]
+    [currentCard, submitting, cardStartTime, sessionId, cards.length]
   );
+
+  const handleEndEarly = useCallback(async () => {
+    if (
+      !confirm(
+        'Bạn có chắc chắn muốn kết thúc buổi học hôm nay? Các thẻ chưa ôn sẽ được bảo lưu an toàn và tự động gối sang ngày mai.'
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/review/end-early', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setIsEndedEarly(true);
+      } else {
+        alert(json.error || 'Lỗi khi kết thúc phiên');
+      }
+    } catch (err) {
+      console.error('Error ending early:', err);
+      alert('Lỗi kết nối khi kết thúc phiên');
+    }
+  }, [sessionId]);
 
   const speakCurrentCard = useCallback(() => {
     if (!currentCard) return;
@@ -206,16 +260,20 @@ export default function ReviewPage() {
     );
   }
 
-  // Completion Screen (when all cards in this session are done)
-  if (cards.length > 0 && currentIndex >= cards.length) {
+  // Completion Screen (when all cards in this session are done or ended early)
+  if (isEndedEarly || (cards.length > 0 && currentIndex >= cards.length)) {
     return (
       <div className={styles.container}>
         <div className={styles.completionCard}>
-          <div className={styles.completionIcon}>🎉</div>
-          <h2 className={styles.completionTitle}>Hoàn thành xuất sắc phiên ôn tập!</h2>
+          <div className={styles.completionIcon}>{isEndedEarly ? '🛑' : '🎉'}</div>
+          <h2 className={styles.completionTitle}>
+            {isEndedEarly ? 'Đã lưu lại tiến độ học hôm nay!' : 'Hoàn thành xuất sắc phiên ôn tập!'}
+          </h2>
           <p className={styles.completionText}>
-            Bạn đã ôn tập thành công <strong>{completedCount}</strong> thẻ trong ngày học hôm nay ({studyDate}).
-            Kiên trì đều đặn 1 giờ mỗi ngày là chìa khóa đạt band 6.5!
+            Bạn đã ôn tập thành công <strong>{completedCount}</strong> thẻ trong ngày học hôm nay ({studyDate}).{' '}
+            {isEndedEarly
+              ? 'Các thẻ chưa ôn đã được bảo lưu an toàn và sẽ tự động xuất hiện vào ngày học tiếp theo!'
+              : 'Kiên trì đều đặn 1 giờ mỗi ngày là chìa khóa đạt band 6.5!'}
           </p>
           <div className={styles.actionLinks}>
             <Link href="/vocab" className={styles.btnSecondary}>
@@ -264,8 +322,20 @@ export default function ReviewPage() {
         <div className={styles.titleArea}>
           <h1>Ôn tập SRS Flashcard</h1>
         </div>
-        <div className={styles.studyDateBadge}>
-          🗓️ Ngày học: <strong>{studyDate}</strong> (đổi ngày 04:00 AM)
+        <div className={styles.headerActions}>
+          <div className={styles.studyDateBadge}>
+            🗓️ Ngày học: <strong>{studyDate}</strong> (đổi ngày 04:00 AM)
+          </div>
+          {cards.length > 0 && currentIndex < cards.length && (
+            <button
+              type="button"
+              className={styles.btnEndEarly}
+              onClick={handleEndEarly}
+              title="Dừng phiên học sớm, các thẻ còn lại sẽ gối sang ngày mai"
+            >
+              🛑 Kết thúc hôm nay
+            </button>
+          )}
         </div>
       </div>
 

@@ -31,16 +31,29 @@ export interface DueCardDTO {
   dueDate: string;
   wordContent?: DueWordContentDTO;
   mistakeContent?: DueMistakeContentDTO;
+  requeueCount?: number;
+  hasLapsedInSession?: boolean;
 }
 
 export interface SubmitReviewInput {
   reviewStateId: string;
   rating: Rating;
   reviewDurationMs?: number;
+  sessionId?: string;
 }
 
 export interface DueCardsResponseData {
+  sessionId?: string;
   studyDate: string;
   count: number;
+  currentIndex?: number;
+  completedCount?: number;
   cards: DueCardDTO[];
+}
+
+export interface EndSessionResponseData {
+  sessionId: string;
+  status: 'COMPLETED';
+  completedCount: number;
+  message: string;
 }

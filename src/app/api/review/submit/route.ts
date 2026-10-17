@@ -5,7 +5,7 @@ import type { Rating } from '@/lib/srs/scheduler';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { reviewStateId, rating, reviewDurationMs } = body;
+    const { reviewStateId, rating, reviewDurationMs, sessionId } = body;
 
     if (!reviewStateId || typeof reviewStateId !== 'string') {
       return NextResponse.json(
@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       reviewStateId,
       rating,
       reviewDurationMs: typeof reviewDurationMs === 'number' ? reviewDurationMs : 0,
+      sessionId: typeof sessionId === 'string' ? sessionId : undefined,
     });
 
     return NextResponse.json({

@@ -118,7 +118,7 @@ Bảng dưới đây là kim chỉ nam tiến độ cho toàn bộ dự án. Khi
 - [x] **Task 2b.1:** Thẻ Mistake nâng cao (mặt trước bắt buộc gõ lại câu đúng, so khớp diff highlight trực quan phân biệt hoa/thường và dấu câu).
 - [x] **Task 2b.2:** Thẻ Word 3 chế độ (Từ $\rightarrow$ Nghĩa, Nghĩa $\rightarrow$ Từ, Đục lỗ câu `Cloze Deletion` thông qua trường `Sentence.targetForm` kèm fallback).
 - [x] **Task 2b.3:** Máy trạng thái trong phiên `processSessionCard` (re-queue thẻ quên tối đa 3 lần, phạt lapse 1 lần duy nhất trong phiên).
-- [ ] **Task 2b.4:** Quản lý phiên dở dang tại CSDL (`ReviewSession`), nút "Kết thúc hôm nay", tự động chuyển `ABANDONED` sau 04:00 AM.
+- [x] **Task 2b.4:** Quản lý phiên dở dang tại CSDL (`ReviewSession`), nút "Kết thúc hôm nay", tự động chuyển `ABANDONED` sau 04:00 AM.
 - [ ] **Task 2b.5:** Hạn ngạch học tập hằng ngày `StudyQuotaConfig` (từ mới, lỗi mới, trần ôn tập) và thuật toán trộn xen kẽ 2 Từ : 1 Lỗi (Interleaving).
 
 ### 📋 Lát 3: Nhật ký Lỗi sai Chi tiết & Dashboard Thống kê IELTS (~1–2 buổi)
