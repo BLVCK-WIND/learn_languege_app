@@ -101,7 +101,7 @@ Mọi trợ lý AI / AI Agent khi tham gia phát triển dự án này bắt bu�
 Bảng dưới đây là kim chỉ nam tiến độ cho toàn bộ dự án. Khi hoàn thành mỗi Task, AI tự động đánh dấu `[x]` vào ô tương ứng:
 
 ### 📋 Lát 1: Nền tảng Dữ liệu, Schema Prisma & Cỗ máy Import Dry-run (~1–2 buổi)
-- [ ] **Task 1.1:** Khởi tạo `package.json` với engines Node `>=24.11.0`, ghim cứng toàn bộ phiên bản dependencies chính xác theo [TECH_STACK.md](file:///d:/Antigravity/learn_languege_app/docs/TECH_STACK.md), cài đặt và kiểm tra biên dịch C++ native của `better-sqlite3` trên Windows.
+- [x] **Task 1.1:** Khởi tạo `package.json` với engines Node `>=24.11.0`, ghim cứng toàn bộ phiên bản dependencies chính xác theo [TECH_STACK.md](file:///d:/Antigravity/learn_languege_app/docs/TECH_STACK.md), cài đặt và kiểm tra biên dịch C++ native của `better-sqlite3` trên Windows.
 - [ ] **Task 1.2:** Cấu hình `prisma.config.ts`, tạo `prisma/schema.prisma` đầy đủ 11 thực thể theo [DATABASE_SCHEMA.md](file:///d:/Antigravity/learn_languege_app/docs/DATABASE_SCHEMA.md) với cú pháp CUID2 `cuid(2)`.
 - [ ] **Task 1.3:** Viết script `scripts/backup.ts` (sao lưu SQLite bằng `VACUUM INTO` ngoài transaction) và `scripts/migrate.ts` (tự động sao lưu trước khi migrate, bật tường minh `PRAGMA foreign_keys = ON;`).
 - [ ] **Task 1.4:** Viết module thuần `src/lib/study-day.ts` (`getStudyDate`, `addDaysToStudyDate` tính bằng số học UTC +3 giờ mốc 04:00 AM) và module băm chuỗi chuẩn hóa SHA-256 (`src/lib/crypto/hash.ts`).
