@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "session": {
+    "week": 1,
+    "day": 2,
+    "seq": 1,
+    "studiedAt": "2026-10-17T14:30:00.000Z",
+    "checkpoint": "Xong: Hiện tại đơn, 2 từ B2 và nhận diện lỗi chia động từ"
+  },
+  "words": [
+    {
+      "word": "achieve",
+      "pos": "verb",
+      "ipa": "/əˈtʃiːv/",
+      "meanings": [
+        "đạt được, giành được mục tiêu sau nhiều nỗ lực"
+      ],
+      "sentences": [
+        {
+          "text": "I want to achieve band 6.5 within a year.",
+          "translationVi": "Tôi muốn đạt được band 6.5 trong vòng một năm.",
+          "targetForm": "achieve"
+        },
+        {
+          "text": "She achieved remarkable success in her software engineering career.",
+          "translationVi": "Cô ấy đã đạt được thành công đáng nể trong sự nghiệp công nghệ phần mềm.",
+          "targetForm": "achieved"
+        }
+      ]
+    },
+    {
+      "word": "consistent",
+      "pos": "adj",
+      "ipa": "/kənˈsɪs.tənt/",
+      "meanings": [
+        "nhất quán, kiên trì, không thay đổi"
+      ],
+      "sentences": [
+        {
+          "text": "Consistent practice for one hour every day is the key to IELTS success.",
+          "translationVi": "Luyện tập nhất quán một giờ mỗi ngày là chìa khóa để đạt kết quả IELTS.",
+          "targetForm": "Consistent"
+        }
+      ]
+    }
+  ],
+  "mistakes": [
+    {
+      "wrong": "I sometime play game with my friend.",
+      "correct": "I sometimes play games with my friends.",
+      "category": "plural-s",
+      "explanationVi": "'sometimes' luôn có 's' khi là trạng từ chỉ tần suất; 'game' và 'friend' là danh từ đếm được nên cần dùng số nhiều trong ngữ cảnh này."
+    },
+    {
+      "wrong": "She do not understands the present simple tense.",
+      "correct": "She does not understand the present simple tense.",
+      "category": "subject-verb-agreement",
+      "explanationVi": "Chủ ngữ ngôi thứ ba số ít 'She' đi với trợ động từ 'does'; sau trợ động từ phủ định 'does not', động từ chính giữ nguyên mẫu 'understand'."
+    }
+  ]
+}
