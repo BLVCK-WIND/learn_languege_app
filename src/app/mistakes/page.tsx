@@ -5,6 +5,7 @@ import Link from 'next/link';
 import styles from './mistakes.module.css';
 import type { MistakeItemDTO, MistakeListResponse } from '@/types/mistake';
 import { MISTAKE_CATEGORY_LABELS, type MistakeCategoryType } from '@/types/import';
+import { AudioButton } from '@/components/AudioButton';
 
 export default function MistakesPage() {
   const [data, setData] = useState<MistakeListResponse | null>(null);
@@ -208,7 +209,8 @@ export default function MistakesPage() {
                     </div>
                     <div className={`${styles.sentenceRow} ${styles.correctRow}`}>
                       <span className={styles.sentenceIcon}>✅</span>
-                      <span className={styles.sentenceText}>{mistake.correct}</span>
+                      <span className={styles.sentenceText} style={{ flex: 1 }}>{mistake.correct}</span>
+                      <AudioButton text={mistake.correct} size="sm" title="Nghe phát âm câu đúng" />
                     </div>
                   </div>
 

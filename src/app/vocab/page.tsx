@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './vocab.module.css';
 import type { VocabItemDTO, VocabListResponse } from '@/types/vocab';
+import { AudioButton } from '@/components/AudioButton';
 
 const POS_OPTIONS = [
   { value: 'all', label: 'Tất cả từ loại' },
@@ -208,6 +209,11 @@ export default function VocabPage() {
                     <span className={styles.wordText}>{word.normalizedWord}</span>
                     {renderPosBadge(word.pos)}
                     {word.ipa && <span className={styles.ipa}>{word.ipa}</span>}
+                    <AudioButton
+                      text={word.normalizedWord}
+                      size="sm"
+                      title={`Nghe phát âm từ "${word.normalizedWord}"`}
+                    />
                   </div>
                   <button
                     type="button"
@@ -240,8 +246,13 @@ export default function VocabPage() {
                   <div className={styles.sentencesSection}>
                     {word.sentences.map((sentence) => (
                       <div key={sentence.id} className={styles.sentenceItem}>
-                        <div className={styles.sentenceEn}>
-                          {renderSentenceWithHighlight(sentence.text, sentence.targetForm)}
+                        <div className={styles.sentenceEn} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <AudioButton
+                            text={sentence.text}
+                            size="sm"
+                            title="Nghe phát âm câu ví dụ"
+                          />
+                          <span>{renderSentenceWithHighlight(sentence.text, sentence.targetForm)}</span>
                         </div>
                         <div className={styles.sentenceVi}>{sentence.translationVi}</div>
                       </div>

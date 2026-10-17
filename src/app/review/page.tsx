@@ -6,6 +6,8 @@ import styles from './review.module.css';
 import type { DueCardDTO } from '@/types/review';
 import type { Rating } from '@/lib/srs/scheduler';
 import { MISTAKE_CATEGORY_LABELS, type MistakeCategoryType } from '@/types/import';
+import { AudioButton } from '@/components/AudioButton';
+import { playWebSpeech } from '@/lib/audio/web-speech';
 
 export default function ReviewPage() {
   const [cards, setCards] = useState<DueCardDTO[]>([]);
@@ -77,6 +79,15 @@ export default function ReviewPage() {
     [currentCard, submitting, cardStartTime]
   );
 
+  const speakCurrentCard = useCallback(() => {
+    if (!currentCard) return;
+    if (currentCard.itemType === 'WORD' && currentCard.wordContent) {
+      playWebSpeech(currentCard.wordContent.normalizedWord);
+    } else if (currentCard.itemType === 'MISTAKE' && currentCard.mistakeContent) {
+      playWebSpeech(currentCard.mistakeContent.correct);
+    }
+  }, [currentCard]);
+
   // Keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -85,7 +96,10 @@ export default function ReviewPage() {
         return;
       }
 
-      if (e.code === 'Space') {
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        speakCurrentCard();
+      } else if (e.code === 'Space') {
         e.preventDefault();
         if (!isFlipped && currentCard) {
           setIsFlipped(true);
@@ -106,7 +120,7 @@ export default function ReviewPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped, submitting, currentCard, handleRating]);
+  }, [isFlipped, submitting, currentCard, handleRating, speakCurrentCard]);
 
   if (loading) {
     return (
@@ -220,11 +234,16 @@ export default function ReviewPage() {
               <div className={styles.wordMain}>
                 <span>{currentCard.wordContent.normalizedWord}</span>
                 <span className={styles.posTag}>{currentCard.wordContent.pos}</span>
+                <AudioButton
+                  text={currentCard.wordContent.normalizedWord}
+                  size="md"
+                  title={`Nghe phát âm từ "${currentCard.wordContent.normalizedWord}" (Phím R)`}
+                />
               </div>
 
               {!isFlipped ? (
                 <div className={styles.flipHint}>
-                  Nhấn <kbd className={styles.kbd}>Space</kbd> hoặc nút bên dưới để lật thẻ xem nghĩa
+                  Nhấn <kbd className={styles.kbd}>Space</kbd> để lật thẻ • Nhấn <kbd className={styles.kbd}>R</kbd> để nghe phát âm
                 </div>
               ) : (
                 <>
@@ -248,8 +267,13 @@ export default function ReviewPage() {
 
                     {currentCard.wordContent.exampleSentence && (
                       <div className={styles.exampleBox}>
-                        <div className={styles.exampleEn}>
-                          &ldquo;{currentCard.wordContent.exampleSentence.text}&rdquo;
+                        <div className={styles.exampleEn} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <AudioButton
+                            text={currentCard.wordContent.exampleSentence.text}
+                            size="sm"
+                            title="Nghe phát âm câu ví dụ"
+                          />
+                          <span>&ldquo;{currentCard.wordContent.exampleSentence.text}&rdquo;</span>
                         </div>
                         <div className={styles.exampleVi}>
                           {currentCard.wordContent.exampleSentence.translationVi}
@@ -270,15 +294,20 @@ export default function ReviewPage() {
 
               {!isFlipped ? (
                 <div className={styles.flipHint}>
-                  Nhấn <kbd className={styles.kbd}>Space</kbd> hoặc nút bên dưới để xem câu đúng và giải thích
+                  Nhấn <kbd className={styles.kbd}>Space</kbd> để xem câu đúng • Nhấn <kbd className={styles.kbd}>R</kbd> để nghe phát âm câu đúng
                 </div>
               ) : (
                 <>
                   <div className={styles.backDivider} />
 
                   <div className={styles.backContent}>
-                    <div className={styles.mistakeCorrect}>
-                      ✅ {currentCard.mistakeContent.correct}
+                    <div className={styles.mistakeCorrect} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ flex: 1 }}>✅ {currentCard.mistakeContent.correct}</span>
+                      <AudioButton
+                        text={currentCard.mistakeContent.correct}
+                        size="sm"
+                        title="Nghe phát âm câu đúng (Phím R)"
+                      />
                     </div>
 
                     <div className={styles.explanationText}>
