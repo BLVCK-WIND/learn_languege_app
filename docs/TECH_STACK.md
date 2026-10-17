@@ -211,22 +211,17 @@ export function addDaysToStudyDate(studyDate: string, days: number): string {
 ## 6. Cơ chế Kết nối Prisma 7 với SQLite & Kiểm tra Khóa Ngoại
 
 ### 6.1. Khởi tạo PrismaClient với Adapter `better-sqlite3`
-Trong Prisma 7, kết nối tới SQLite thông qua driver adapter yêu cầu truyền một instance `Database` đã được cấu hình:
+Trong Prisma 7 (v7.10.1), driver adapter `@prisma/adapter-better-sqlite3` cung cấp class factory `PrismaBetterSqlite3` nhận tham số cấu hình `{ url: string, ...options }`:
 
 ```typescript
 // src/lib/prisma.ts
-import Database from 'better-sqlite3';
-import { PrismaBetterSqlite } from '@prisma/adapter-better-sqlite3';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { PrismaClient } from '@prisma/client';
 import path from 'node:path';
 
 const dbPath = path.join(process.cwd(), 'data', 'app.db');
-const db = new Database(dbPath);
 
-// BẮT BUỘC: Kích hoạt thủ công ràng buộc khóa ngoại trên kết nối better-sqlite3
-db.pragma('foreign_keys = ON;');
-
-const adapter = new PrismaBetterSqlite(db);
+const adapter = new PrismaBetterSqlite3({ url: dbPath });
 export const prisma = new PrismaClient({ adapter });
 ```
 
@@ -320,3 +315,4 @@ export function createDatabaseBackup(prefix: string = 'backup'): string {
 | **2026-10-17** | **Quy tắc cô lập dữ liệu thật vào `data/` và `.gitignore`.** | Đảm bảo an toàn tuyệt đối khi public mã nguồn lên GitHub; chỉ commit dữ liệu giả lập trong `fixtures/`. | Lưu DB rải rác hoặc commit file DB chứa lịch sử học tập cá nhân lên repo public. |
 | **2026-10-17** | **CSS Modules + Tokens thay vì TailwindCSS.** | Tránh phụ thuộc vào công cụ tiền xử lý, tránh rủi ro vỡ cấu hình giữa Tailwind v3 và v4, giữ code CSS chuẩn mực. | Dùng TailwindCSS hoặc các thư viện CSS-in-JS có chi phí runtime. |
 | **2026-10-17** | **Lưu `dueDate` dạng chuỗi `YYYY-MM-DD`.** | Cho phép so sánh trực tiếp chuỗi ngày học với kết quả `getStudyDate(now)` mà không cần parse timestamp phức tạp hay lo lệch múi giờ. | Lưu timestamp ISO-8601 UTC. |
+| **2026-10-17** | **Khai báo datasource url trong `prisma.config.ts` và dùng adapter `PrismaBetterSqlite3`.** | Prisma 7 cấm thuộc tính `url` trong schema file (báo lỗi P1012), chuyển sang `prisma.config.ts`; adapter class của `@prisma/adapter-better-sqlite3` là `PrismaBetterSqlite3` nhận config object `{ url }`. | Đặt `url` trong `schema.prisma` (bị Prisma 7 từ chối khi validate). |

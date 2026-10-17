@@ -1,0 +1,157 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model ImportBatch {
+  id            String    @id @default(cuid(2))
+  sessionWeek   Int
+  sessionDay    Int
+  seq           Int
+  contentHash   String    @unique
+  rawPayload    String
+  remappingJson String?
+  status        String
+  importedAt    DateTime  @default(now())
+  sessions      Session[]
+}
+
+model Session {
+  id            String        @id @default(cuid(2))
+  importBatchId String?
+  importBatch   ImportBatch?  @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  week          Int
+  day           Int
+  seq           Int           @default(1)
+  checkpoint    String
+  studiedAt     DateTime
+  createdAt     DateTime      @default(now())
+  items         SessionItem[]
+
+  @@unique([week, day, seq])
+}
+
+model SessionItem {
+  id        String   @id @default(cuid(2))
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  itemType  String
+  itemId    String
+  role      String
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, itemType, itemId])
+}
+
+model Word {
+  id             String        @id @default(cuid(2))
+  normalizedWord String
+  pos            String
+  ipa            String?
+  audioUrl       String?
+  audioStatus    String        @default("PENDING")
+  audioUpdatedAt DateTime?
+  audioAttempts  Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  meanings       WordMeaning[]
+  sentences      Sentence[]
+
+  @@unique([normalizedWord, pos])
+}
+
+model WordMeaning {
+  id        String    @id @default(cuid(2))
+  wordId    String
+  word      Word      @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  meaningVi String
+  context   String?
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+}
+
+model Sentence {
+  id             String    @id @default(cuid(2))
+  wordId         String
+  word           Word      @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  text           String
+  targetForm     String?
+  translationVi  String
+  audioUrl       String?
+  audioStatus    String    @default("PENDING")
+  audioUpdatedAt DateTime?
+  audioAttempts  Int       @default(0)
+  contentHash    String
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  @@unique([wordId, contentHash])
+}
+
+model Mistake {
+  id            String    @id @default(cuid(2))
+  wrong         String
+  correct       String
+  category      String
+  subCategory   String?
+  explanationVi String
+  contentHash   String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+}
+
+model ReviewState {
+  id             String      @id @default(cuid(2))
+  itemType       String
+  itemId         String
+  interval       Int         @default(0)
+  easeFactor     Float       @default(2.5)
+  dueDate        String
+  repetitions    Int         @default(0)
+  lapseCount     Int         @default(0)
+  lastReviewedAt DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  logs           ReviewLog[]
+
+  @@unique([itemType, itemId])
+  @@index([itemType, dueDate])
+}
+
+model ReviewLog {
+  id               String      @id @default(cuid(2))
+  reviewStateId    String
+  reviewState      ReviewState @relation(fields: [reviewStateId], references: [id], onDelete: Cascade)
+  rating           String
+  intervalBefore   Int
+  intervalAfter    Int
+  easeFactorBefore Float
+  easeFactorAfter  Float
+  reviewDurationMs Int
+  reviewedAt       DateTime    @default(now())
+}
+
+model ReviewSession {
+  id             String   @id @default(cuid(2))
+  sessionDate    String
+  queueJson      String
+  currentIndex   Int      @default(0)
+  completedCount Int      @default(0)
+  status         String   @default("IN_PROGRESS")
+  startedAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model StudyQuotaConfig {
+  id                      String   @id @default(cuid(2))
+  maxNewWordsPerDay       Int      @default(10)
+  maxNewMistakesPerDay    Int      @default(5)
+  maxReviewWordsPerDay    Int      @default(50)
+  maxReviewMistakesPerDay Int      @default(30)
+  updatedAt               DateTime @updatedAt
+}
