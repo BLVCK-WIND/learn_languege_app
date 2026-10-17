@@ -65,6 +65,7 @@ erDiagram
         string id PK "cuid(2)"
         string wordId FK "Khóa ngoại trỏ tới Word"
         string text "Câu ví dụ nguyên bản"
+        string targetForm "Dạng hiển thị của từ trong câu (tùy chọn)"
         string meaningVi "Dịch nghĩa tiếng Việt của câu"
         string audioUrl "Đường dẫn file audio local"
         string audioStatus "PENDING | READY | FAILED"
@@ -168,11 +169,12 @@ erDiagram
   - Cho phép một cặp `(word, pos)` có nhiều nghĩa tiếng Việt hoặc sắc thái ngữ cảnh bổ sung khi học qua các buổi khác nhau.
   - `deletedAt`: Quản lý xóa mềm (`DateTime?`).
 
-### 2.5. Thực thể `Sentence` (Câu Ví dụ & Audio)
+### 2.5. Thực thể `Sentence` (Câu Ví dụ, Audio & Dạng từ Đục lỗ)
 - **Mục đích:** Lưu trữ câu ví dụ cho từ vựng.
+- **Trường `targetForm` (tùy chọn):** Lưu dạng chữ chính xác của từ vựng xuất hiện trong câu (ví dụ: từ vựng gốc là *achieve*, nhưng trong câu xuất hiện ở dạng quá khứ *achieved* hoặc phân từ *achieving*). Trường này phục vụ trực tiếp cho thẻ ôn tập đục lỗ (Cloze Deletion) ở Lát 2b. Nếu không có `targetForm` hoặc không tìm thấy chuỗi trong `text`, hệ thống sẽ tự động rơi về chế độ ôn tập nhận diện hoặc hồi tưởng.
 - **Khóa chống trùng:** `@@unique([wordId, contentHash])`.
-  - **Lý do thay đổi:** Một câu văn hay có thể đóng vai trò là câu ví dụ đồng thời cho nhiều từ vựng khác nhau (ví dụ: câu chứa cả từ *achieve* và *goal*). Do đó ràng buộc trùng lặp gắn theo cặp `(wordId, contentHash)` thay vì toàn cục.
-  - **Tối ưu file audio:** Dù câu xuất hiện ở nhiều từ, file âm thanh sinh ra vẫn chỉ lưu **duy nhất 1 file** trên ổ đĩa tại `data/audio/[sha256].mp3` nhờ cơ chế đặt tên theo hash nội dung.
+  - **Lý do:** Một câu văn hay có thể dùng làm ví dụ đồng thời cho nhiều từ vựng khác nhau. Do đó ràng buộc trùng lặp gắn theo cặp `(wordId, contentHash)`.
+  - **Tối ưu file audio:** File âm thanh sinh ra vẫn chỉ lưu **duy nhất 1 file** trên ổ đĩa tại `/data/audio/[sha256].mp3` nhờ đặt tên theo hash nội dung.
 
 ### 2.6. Thực thể `Mistake` (Nhật ký Lỗi sai & Định nghĩa Số lần mắc)
 - **Khóa chống trùng:** `contentHash` mang ràng buộc `@unique` (tính trên cặp câu sai + đúng đã chuẩn hóa).
