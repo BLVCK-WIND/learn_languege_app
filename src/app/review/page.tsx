@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import styles from './review.module.css';
-import type { DueCardDTO } from '@/types/review';
+import type { DueCardDTO, QuotaSummaryDTO } from '@/types/review';
 import type { Rating } from '@/lib/srs/scheduler';
 import { MISTAKE_CATEGORY_LABELS, type MistakeCategoryType } from '@/types/import';
 import { AudioButton } from '@/components/AudioButton';
@@ -22,6 +22,7 @@ export default function ReviewPage() {
   const [completedCount, setCompletedCount] = useState(0);
   const [studyDate, setStudyDate] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [quotaSummary, setQuotaSummary] = useState<QuotaSummaryDTO | null>(null);
   const [isEndedEarly, setIsEndedEarly] = useState(false);
   const [cardStartTime, setCardStartTime] = useState<number>(Date.now());
   const typingInputRef = useRef<HTMLTextAreaElement>(null);
@@ -35,6 +36,9 @@ export default function ReviewPage() {
         setCards(json.data.cards);
         setStudyDate(json.data.studyDate);
         setSessionId(json.data.sessionId || null);
+        if (json.data.quotaSummary) {
+          setQuotaSummary(json.data.quotaSummary);
+        }
         if (typeof json.data.currentIndex === 'number') {
           setCurrentIndex(json.data.currentIndex);
         }
@@ -353,6 +357,18 @@ export default function ReviewPage() {
             style={{ width: `${progressPercent}%` }}
           />
         </div>
+        {quotaSummary && (
+          <div className={styles.quotaBadge}>
+            <span>Trộn xen kẽ 2 Từ : 1 Lỗi</span>
+            <span>•</span>
+            <span className={styles.quotaPill}>
+              Mới: {quotaSummary.newWords} từ, {quotaSummary.newMistakes} lỗi
+            </span>
+            <span className={styles.quotaPill}>
+              Ôn tập: {quotaSummary.reviewWords} từ, {quotaSummary.reviewMistakes} lỗi
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Card Container */}

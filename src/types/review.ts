@@ -42,12 +42,20 @@ export interface SubmitReviewInput {
   sessionId?: string;
 }
 
+export interface QuotaSummaryDTO {
+  reviewWords: number;
+  newWords: number;
+  reviewMistakes: number;
+  newMistakes: number;
+}
+
 export interface DueCardsResponseData {
   sessionId?: string;
   studyDate: string;
   count: number;
   currentIndex?: number;
   completedCount?: number;
+  quotaSummary?: QuotaSummaryDTO;
   cards: DueCardDTO[];
 }
 

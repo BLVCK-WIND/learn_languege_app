@@ -7,6 +7,8 @@ import {
   type SessionItemState,
 } from '@/lib/srs/session-machine';
 import { getStudyDate } from '@/lib/study-day';
+import { interleaveCards } from '@/lib/srs/interleaving';
+import { DEFAULT_QUOTA_CONFIG } from '@/services/quota.service';
 import type {
   DueCardDTO,
   DueCardsResponseData,
@@ -201,15 +203,60 @@ export class DefaultReviewService {
       }
     }
 
-    // 2. Chưa có phiên IN_PROGRESS cho hôm nay: Lấy các thẻ ReviewState đến hạn
-    const dueStates = await this.prisma.reviewState.findMany({
-      where: {
-        dueDate: { lte: todayStudyDate },
-      },
-      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
-    });
+    // 2. Chưa có phiên IN_PROGRESS cho hôm nay:
+    // Lấy cấu hình quota hiện tại (hoặc mặc định)
+    const quotaConfig =
+      (await this.prisma.studyQuotaConfig.findFirst()) || DEFAULT_QUOTA_CONFIG;
 
-    if (dueStates.length === 0) {
+    // Phân loại thẻ đến hạn hôm nay: Thẻ ôn tập (lastReviewedAt != null) & Thẻ mới (lastReviewedAt == null)
+    // Áp dụng hạn ngạch cho từng nhóm
+    const [reviewWords, reviewMistakes, newWords, newMistakes] = await Promise.all([
+      // Thẻ từ vựng ôn tập (ưu tiên dueDate ASC, createdAt ASC)
+      this.prisma.reviewState.findMany({
+        where: {
+          itemType: 'WORD',
+          lastReviewedAt: { not: null },
+          dueDate: { lte: todayStudyDate },
+        },
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+        take: quotaConfig.maxReviewWordsPerDay,
+      }),
+      // Thẻ lỗi sai ôn tập (ưu tiên dueDate ASC, createdAt ASC)
+      this.prisma.reviewState.findMany({
+        where: {
+          itemType: 'MISTAKE',
+          lastReviewedAt: { not: null },
+          dueDate: { lte: todayStudyDate },
+        },
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+        take: quotaConfig.maxReviewMistakesPerDay,
+      }),
+      // Thẻ từ vựng mới (ưu tiên thời gian nhập liệu cũ nhất trước: createdAt ASC)
+      this.prisma.reviewState.findMany({
+        where: {
+          itemType: 'WORD',
+          lastReviewedAt: null,
+          dueDate: { lte: todayStudyDate },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: quotaConfig.maxNewWordsPerDay,
+      }),
+      // Thẻ lỗi sai mới (ưu tiên createdAt ASC)
+      this.prisma.reviewState.findMany({
+        where: {
+          itemType: 'MISTAKE',
+          lastReviewedAt: null,
+          dueDate: { lte: todayStudyDate },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: quotaConfig.maxNewMistakesPerDay,
+      }),
+    ]);
+
+    const allWordStates = [...reviewWords, ...newWords];
+    const allMistakeStates = [...reviewMistakes, ...newMistakes];
+
+    if (allWordStates.length === 0 && allMistakeStates.length === 0) {
       return {
         studyDate: todayStudyDate,
         count: 0,
@@ -219,8 +266,13 @@ export class DefaultReviewService {
       };
     }
 
-    const cards = await this.enrichCardItems(dueStates);
-    if (cards.length === 0) {
+    // Làm giàu nội dung từ vựng và câu sai
+    const [wordCards, mistakeCards] = await Promise.all([
+      this.enrichCardItems(allWordStates),
+      this.enrichCardItems(allMistakeStates),
+    ]);
+
+    if (wordCards.length === 0 && mistakeCards.length === 0) {
       return {
         studyDate: todayStudyDate,
         count: 0,
@@ -229,6 +281,16 @@ export class DefaultReviewService {
         cards: [],
       };
     }
+
+    // Áp dụng thuật toán trộn xen kẽ Interleaving 2 Từ : 1 Lỗi
+    const cards = interleaveCards(wordCards, mistakeCards, { words: 2, mistakes: 1 });
+
+    const quotaSummary = {
+      reviewWords: reviewWords.length,
+      newWords: newWords.length,
+      reviewMistakes: reviewMistakes.length,
+      newMistakes: newMistakes.length,
+    };
 
     // Khởi tạo bản ghi ReviewSession mới trong CSDL
     const initialItems: SessionItemState[] = cards.map((c) => ({
@@ -257,6 +319,7 @@ export class DefaultReviewService {
       count: cards.length,
       currentIndex: 0,
       completedCount: 0,
+      quotaSummary,
       cards,
     };
   }
