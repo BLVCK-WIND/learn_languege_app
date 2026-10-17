@@ -257,6 +257,169 @@
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
+/* Mistake Typing Area */
+.typingContainer {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: left;
+}
+
+.typingLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.typingHint {
+  font-size: 0.775rem;
+  font-weight: normal;
+  color: var(--color-text-muted);
+}
+
+.typingTextarea {
+  width: 100%;
+  min-height: 80px;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.typingTextarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+.typingActions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.btnSkip {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btnSkip:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.btnCheck {
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: background-color 0.15s ease;
+}
+
+.btnCheck:hover {
+  background: var(--color-primary-hover);
+}
+
+/* Diff Comparison Section */
+.diffContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.diffExactBanner {
+  background: var(--color-success-subtle);
+  border: 1px solid var(--color-success-border);
+  color: #166534;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.diffSection {
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+}
+
+.diffSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.diffSectionTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.diffBox {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.diffError {
+  background: #fee2e2;
+  color: #b91c1c;
+  text-decoration: line-through;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #fca5a5;
+  font-weight: 600;
+}
+
+.diffSuccess {
+  background: #dcfce7;
+  color: #15803d;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #86efac;
+  font-weight: 600;
+}
+
+.diffEmpty {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
 /* Flip action button */
 .flipBtn {
   width: 100%;

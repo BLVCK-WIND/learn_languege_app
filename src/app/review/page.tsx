@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import styles from './review.module.css';
 import type { DueCardDTO } from '@/types/review';
@@ -8,16 +8,19 @@ import type { Rating } from '@/lib/srs/scheduler';
 import { MISTAKE_CATEGORY_LABELS, type MistakeCategoryType } from '@/types/import';
 import { AudioButton } from '@/components/AudioButton';
 import { playWebSpeech } from '@/lib/audio/web-speech';
+import { compareMistakeSentence } from '@/lib/diff';
 
 export default function ReviewPage() {
   const [cards, setCards] = useState<DueCardDTO[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [userAttempt, setUserAttempt] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [studyDate, setStudyDate] = useState('');
   const [cardStartTime, setCardStartTime] = useState<number>(Date.now());
+  const typingInputRef = useRef<HTMLTextAreaElement>(null);
 
   const fetchDueCards = useCallback(async () => {
     setLoading(true);
@@ -42,6 +45,16 @@ export default function ReviewPage() {
 
   const currentCard = cards[currentIndex] || null;
 
+  // Auto-focus textarea on mistake cards when not flipped
+  useEffect(() => {
+    if (currentCard?.itemType === 'MISTAKE' && !isFlipped) {
+      const timer = setTimeout(() => {
+        typingInputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [currentCard, isFlipped, currentIndex]);
+
   const handleRating = useCallback(
     async (rating: Rating) => {
       if (!currentCard || submitting) return;
@@ -63,6 +76,7 @@ export default function ReviewPage() {
         const json = await res.json();
         if (json.success) {
           setIsFlipped(false);
+          setUserAttempt('');
           setCurrentIndex((prev) => prev + 1);
           setCompletedCount((prev) => prev + 1);
           setCardStartTime(Date.now());
@@ -91,8 +105,19 @@ export default function ReviewPage() {
   // Keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in an input
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+      const isTyping = ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName);
+
+      if (isTyping) {
+        // If typing in Mistake textarea, Enter without Shift submits and flips card
+        if (e.key === 'Enter' && !e.shiftKey) {
+          if (currentCard?.itemType === 'MISTAKE' && !isFlipped) {
+            e.preventDefault();
+            if (document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+            setIsFlipped(true);
+          }
+        }
         return;
       }
 
@@ -102,6 +127,9 @@ export default function ReviewPage() {
       } else if (e.code === 'Space') {
         e.preventDefault();
         if (!isFlipped && currentCard) {
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
           setIsFlipped(true);
         }
       } else if (isFlipped && !submitting && currentCard) {
@@ -121,6 +149,13 @@ export default function ReviewPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFlipped, submitting, currentCard, handleRating, speakCurrentCard]);
+
+  const mistakeDiff = useMemo(() => {
+    if (currentCard?.itemType === 'MISTAKE' && currentCard.mistakeContent) {
+      return compareMistakeSentence(userAttempt, currentCard.mistakeContent.correct);
+    }
+    return null;
+  }, [currentCard, userAttempt]);
 
   if (loading) {
     return (
@@ -293,22 +328,97 @@ export default function ReviewPage() {
               </div>
 
               {!isFlipped ? (
-                <div className={styles.flipHint}>
-                  Nhấn <kbd className={styles.kbd}>Space</kbd> để xem câu đúng • Nhấn <kbd className={styles.kbd}>R</kbd> để nghe phát âm câu đúng
+                <div className={styles.typingContainer}>
+                  <label htmlFor="mistake-input" className={styles.typingLabel}>
+                    <span>✍️ Gõ lại câu đúng chuẩn:</span>
+                    <span className={styles.typingHint}>Nhấn Enter để kiểm tra</span>
+                  </label>
+                  <textarea
+                    id="mistake-input"
+                    ref={typingInputRef}
+                    className={styles.typingTextarea}
+                    value={userAttempt}
+                    onChange={(e) => setUserAttempt(e.target.value)}
+                    placeholder="Gõ lại câu hoàn chỉnh đúng chính tả, hoa/thường và dấu câu..."
+                    rows={2}
+                  />
+                  <div className={styles.typingActions}>
+                    <button
+                      type="button"
+                      className={styles.btnSkip}
+                      onClick={() => {
+                        setUserAttempt('');
+                        setIsFlipped(true);
+                      }}
+                    >
+                      Tôi không nhớ (Xem đáp án)
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.btnCheck}
+                      onClick={() => setIsFlipped(true)}
+                    >
+                      Kiểm tra &amp; Lật thẻ (<kbd className={styles.kbd}>Enter</kbd>)
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
                   <div className={styles.backDivider} />
 
                   <div className={styles.backContent}>
-                    <div className={styles.mistakeCorrect} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ flex: 1 }}>✅ {currentCard.mistakeContent.correct}</span>
-                      <AudioButton
-                        text={currentCard.mistakeContent.correct}
-                        size="sm"
-                        title="Nghe phát âm câu đúng (Phím R)"
-                      />
-                    </div>
+                    {mistakeDiff && (
+                      <div className={styles.diffContainer}>
+                        {mistakeDiff.isExactMatch && (
+                          <div className={styles.diffExactBanner}>
+                            🎉 Xuất sắc! Bạn đã gõ chính xác 100% câu đúng chuẩn (đúng từng ký tự hoa/thường và dấu câu).
+                          </div>
+                        )}
+
+                        {/* User Typed Sentence */}
+                        <div className={styles.diffSection}>
+                          <div className={styles.diffSectionHeader}>
+                            <span className={styles.diffSectionTitle}>Câu bạn đã gõ:</span>
+                          </div>
+                          <div className={styles.diffBox}>
+                            {mistakeDiff.cleanUserInput.length === 0 ? (
+                              <span className={styles.diffEmpty}>(Bạn chưa nhập câu trả lời)</span>
+                            ) : (
+                              mistakeDiff.userChunks.map((chunk, idx) => (
+                                <span
+                                  key={idx}
+                                  className={chunk.isError ? styles.diffError : undefined}
+                                >
+                                  {chunk.value}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Target Correct Sentence */}
+                        <div className={styles.diffSection}>
+                          <div className={styles.diffSectionHeader}>
+                            <span className={styles.diffSectionTitle}>Đáp án chuẩn:</span>
+                            <AudioButton
+                              text={currentCard.mistakeContent.correct}
+                              size="sm"
+                              title="Nghe phát âm câu đúng (Phím R)"
+                            />
+                          </div>
+                          <div className={styles.diffBox}>
+                            {mistakeDiff.targetChunks.map((chunk, idx) => (
+                              <span
+                                key={idx}
+                                className={chunk.isMissingOrChanged ? styles.diffSuccess : undefined}
+                              >
+                                {chunk.value}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className={styles.explanationText}>
                       <strong>
@@ -325,13 +435,15 @@ export default function ReviewPage() {
 
         {/* Action Controls */}
         {!isFlipped ? (
-          <button
-            type="button"
-            className={styles.flipBtn}
-            onClick={() => setIsFlipped(true)}
-          >
-            Lật thẻ / Xem đáp án (<kbd className={styles.kbd}>Space</kbd>)
-          </button>
+          currentCard.itemType === 'WORD' ? (
+            <button
+              type="button"
+              className={styles.flipBtn}
+              onClick={() => setIsFlipped(true)}
+            >
+              Lật thẻ / Xem đáp án (<kbd className={styles.kbd}>Space</kbd>)
+            </button>
+          ) : null
         ) : (
           <div className={styles.ratingCluster}>
             <button
