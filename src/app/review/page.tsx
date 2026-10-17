@@ -9,12 +9,14 @@ import { MISTAKE_CATEGORY_LABELS, type MistakeCategoryType } from '@/types/impor
 import { AudioButton } from '@/components/AudioButton';
 import { playWebSpeech } from '@/lib/audio/web-speech';
 import { compareMistakeSentence } from '@/lib/diff';
+import { determineWordCardMode, createClozeSentence, type WordCardMode } from '@/lib/cloze';
 
 export default function ReviewPage() {
   const [cards, setCards] = useState<DueCardDTO[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [userAttempt, setUserAttempt] = useState('');
+  const [selectedWordMode, setSelectedWordMode] = useState<WordCardMode | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
@@ -55,6 +57,37 @@ export default function ReviewPage() {
     }
   }, [currentCard, isFlipped, currentIndex]);
 
+  const wordModeInfo = useMemo(() => {
+    if (currentCard?.itemType !== 'WORD' || !currentCard.wordContent) return null;
+
+    const auto = determineWordCardMode({
+      repetitions: currentCard.repetitions,
+      sentenceText: currentCard.wordContent.exampleSentence?.text,
+      targetForm: currentCard.wordContent.exampleSentence?.targetForm,
+    });
+
+    if (selectedWordMode) {
+      if (selectedWordMode === 'CLOZE') {
+        if (
+          currentCard.wordContent.exampleSentence?.text &&
+          currentCard.wordContent.exampleSentence?.targetForm
+        ) {
+          const cloze = createClozeSentence(
+            currentCard.wordContent.exampleSentence.text,
+            currentCard.wordContent.exampleSentence.targetForm
+          );
+          if (cloze.success) {
+            return { mode: 'CLOZE' as WordCardMode, isFallback: false, clozeResult: cloze };
+          }
+        }
+        return auto;
+      }
+      return { mode: selectedWordMode, isFallback: false };
+    }
+
+    return auto;
+  }, [currentCard, selectedWordMode]);
+
   const handleRating = useCallback(
     async (rating: Rating) => {
       if (!currentCard || submitting) return;
@@ -77,6 +110,7 @@ export default function ReviewPage() {
         if (json.success) {
           setIsFlipped(false);
           setUserAttempt('');
+          setSelectedWordMode(null);
           setCurrentIndex((prev) => prev + 1);
           setCompletedCount((prev) => prev + 1);
           setCardStartTime(Date.now());
@@ -96,11 +130,15 @@ export default function ReviewPage() {
   const speakCurrentCard = useCallback(() => {
     if (!currentCard) return;
     if (currentCard.itemType === 'WORD' && currentCard.wordContent) {
-      playWebSpeech(currentCard.wordContent.normalizedWord);
+      if (wordModeInfo?.mode === 'CLOZE' && isFlipped && currentCard.wordContent.exampleSentence) {
+        playWebSpeech(currentCard.wordContent.exampleSentence.text);
+      } else {
+        playWebSpeech(currentCard.wordContent.normalizedWord);
+      }
     } else if (currentCard.itemType === 'MISTAKE' && currentCard.mistakeContent) {
       playWebSpeech(currentCard.mistakeContent.correct);
     }
-  }, [currentCard]);
+  }, [currentCard, wordModeInfo, isFlipped]);
 
   // Keyboard shortcut listener
   useEffect(() => {
@@ -264,58 +302,250 @@ export default function ReviewPage() {
 
         {/* Card Front & Back Content */}
         <div className={styles.cardContent}>
-          {currentCard.itemType === 'WORD' && currentCard.wordContent && (
+          {currentCard.itemType === 'WORD' && currentCard.wordContent && wordModeInfo && (
             <>
-              <div className={styles.wordMain}>
-                <span>{currentCard.wordContent.normalizedWord}</span>
-                <span className={styles.posTag}>{currentCard.wordContent.pos}</span>
-                <AudioButton
-                  text={currentCard.wordContent.normalizedWord}
-                  size="md"
-                  title={`Nghe phát âm từ "${currentCard.wordContent.normalizedWord}" (Phím R)`}
-                />
+              {/* Word Mode Switcher */}
+              <div className={styles.wordModeRow}>
+                <button
+                  type="button"
+                  className={`${styles.modePill} ${
+                    wordModeInfo.mode === 'RECOGNITION' ? styles.modePillActive : ''
+                  }`}
+                  onClick={() => setSelectedWordMode('RECOGNITION')}
+                >
+                  🔤 Từ → Nghĩa
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.modePill} ${
+                    wordModeInfo.mode === 'RECALL' ? styles.modePillActive : ''
+                  }`}
+                  onClick={() => setSelectedWordMode('RECALL')}
+                >
+                  💡 Nghĩa → Từ
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.modePill} ${
+                    wordModeInfo.mode === 'CLOZE' ? styles.modePillActive : ''
+                  }`}
+                  onClick={() => setSelectedWordMode('CLOZE')}
+                  disabled={!currentCard.wordContent.exampleSentence?.targetForm}
+                  title={
+                    !currentCard.wordContent.exampleSentence?.targetForm
+                      ? 'Câu ví dụ chưa có targetForm để đục lỗ'
+                      : undefined
+                  }
+                >
+                  🧩 Đục lỗ Cloze
+                </button>
+                {wordModeInfo.isFallback && (
+                  <span className={styles.fallbackBadge}>⚠️ Tự động fallback</span>
+                )}
               </div>
 
-              {!isFlipped ? (
-                <div className={styles.flipHint}>
-                  Nhấn <kbd className={styles.kbd}>Space</kbd> để lật thẻ • Nhấn <kbd className={styles.kbd}>R</kbd> để nghe phát âm
-                </div>
-              ) : (
+              {/* Mode 1: RECOGNITION (Từ -> Nghĩa) */}
+              {wordModeInfo.mode === 'RECOGNITION' && (
                 <>
-                  {currentCard.wordContent.ipa && (
-                    <div className={styles.ipaText}>{currentCard.wordContent.ipa}</div>
-                  )}
-
-                  <div className={styles.backDivider} />
-
-                  <div className={styles.backContent}>
-                    {currentCard.wordContent.meanings.length > 0 && (
-                      <div className={styles.meaningsBox}>
-                        <div className={styles.meaningsTitle}>Nghĩa tiếng Việt:</div>
-                        <ul className={styles.meaningsList}>
-                          {currentCard.wordContent.meanings.map((m, idx) => (
-                            <li key={idx}>{m}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {currentCard.wordContent.exampleSentence && (
-                      <div className={styles.exampleBox}>
-                        <div className={styles.exampleEn} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <AudioButton
-                            text={currentCard.wordContent.exampleSentence.text}
-                            size="sm"
-                            title="Nghe phát âm câu ví dụ"
-                          />
-                          <span>&ldquo;{currentCard.wordContent.exampleSentence.text}&rdquo;</span>
-                        </div>
-                        <div className={styles.exampleVi}>
-                          {currentCard.wordContent.exampleSentence.translationVi}
-                        </div>
-                      </div>
-                    )}
+                  <div className={styles.wordMain}>
+                    <span>{currentCard.wordContent.normalizedWord}</span>
+                    <span className={styles.posTag}>{currentCard.wordContent.pos}</span>
+                    <AudioButton
+                      text={currentCard.wordContent.normalizedWord}
+                      size="md"
+                      title={`Nghe phát âm từ "${currentCard.wordContent.normalizedWord}" (Phím R)`}
+                    />
                   </div>
+
+                  {!isFlipped ? (
+                    <div className={styles.flipHint}>
+                      Nhấn <kbd className={styles.kbd}>Space</kbd> để xem nghĩa và câu ví dụ • Nhấn <kbd className={styles.kbd}>R</kbd> để nghe phát âm
+                    </div>
+                  ) : (
+                    <>
+                      {currentCard.wordContent.ipa && (
+                        <div className={styles.ipaText}>{currentCard.wordContent.ipa}</div>
+                      )}
+
+                      <div className={styles.backDivider} />
+
+                      <div className={styles.backContent}>
+                        {currentCard.wordContent.meanings.length > 0 && (
+                          <div className={styles.meaningsBox}>
+                            <div className={styles.meaningsTitle}>Nghĩa tiếng Việt:</div>
+                            <ul className={styles.meaningsList}>
+                              {currentCard.wordContent.meanings.map((m, idx) => (
+                                <li key={idx}>{m}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {currentCard.wordContent.exampleSentence && (
+                          <div className={styles.exampleBox}>
+                            <div className={styles.exampleEn} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <AudioButton
+                                text={currentCard.wordContent.exampleSentence.text}
+                                size="sm"
+                                title="Nghe phát âm câu ví dụ"
+                              />
+                              <span>&ldquo;{currentCard.wordContent.exampleSentence.text}&rdquo;</span>
+                            </div>
+                            <div className={styles.exampleVi}>
+                              {currentCard.wordContent.exampleSentence.translationVi}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Mode 2: RECALL (Nghĩa -> Từ) */}
+              {wordModeInfo.mode === 'RECALL' && (
+                <>
+                  {!isFlipped ? (
+                    <div className={styles.recallContainer}>
+                      <span className={styles.recallPrompt}>Hồi tưởng từ tiếng Anh mang nghĩa:</span>
+                      <div className={styles.recallMeanings}>
+                        {currentCard.wordContent.meanings.join(', ') || 'Chưa có định nghĩa'}
+                      </div>
+                      <span className={styles.posTag}>Từ loại: {currentCard.wordContent.pos}</span>
+
+                      <div className={styles.flipHint} style={{ marginTop: 'var(--space-2)' }}>
+                        Nhấn <kbd className={styles.kbd}>Space</kbd> để xem từ tiếng Anh và phát âm
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={styles.wordMain}>
+                        <span>{currentCard.wordContent.normalizedWord}</span>
+                        <span className={styles.posTag}>{currentCard.wordContent.pos}</span>
+                        <AudioButton
+                          text={currentCard.wordContent.normalizedWord}
+                          size="md"
+                          title={`Nghe phát âm từ "${currentCard.wordContent.normalizedWord}" (Phím R)`}
+                        />
+                      </div>
+
+                      {currentCard.wordContent.ipa && (
+                        <div className={styles.ipaText}>{currentCard.wordContent.ipa}</div>
+                      )}
+
+                      <div className={styles.backDivider} />
+
+                      <div className={styles.backContent}>
+                        {currentCard.wordContent.meanings.length > 0 && (
+                          <div className={styles.meaningsBox}>
+                            <div className={styles.meaningsTitle}>Nghĩa tiếng Việt:</div>
+                            <ul className={styles.meaningsList}>
+                              {currentCard.wordContent.meanings.map((m, idx) => (
+                                <li key={idx}>{m}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {currentCard.wordContent.exampleSentence && (
+                          <div className={styles.exampleBox}>
+                            <div className={styles.exampleEn} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <AudioButton
+                                text={currentCard.wordContent.exampleSentence.text}
+                                size="sm"
+                                title="Nghe phát âm câu ví dụ"
+                              />
+                              <span>&ldquo;{currentCard.wordContent.exampleSentence.text}&rdquo;</span>
+                            </div>
+                            <div className={styles.exampleVi}>
+                              {currentCard.wordContent.exampleSentence.translationVi}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Mode 3: CLOZE (Đục lỗ câu ngữ cảnh) */}
+              {wordModeInfo.mode === 'CLOZE' && wordModeInfo.clozeResult && (
+                <>
+                  {!isFlipped ? (
+                    <div className={styles.clozeContainer}>
+                      <span className={styles.clozePrompt}>Điền dạng từ đúng vào chỗ trống:</span>
+                      <div className={styles.clozeSentenceBox}>
+                        &ldquo;{wordModeInfo.clozeResult.prefix}
+                        <span className={styles.clozeBlank}>[ ... ]</span>
+                        {wordModeInfo.clozeResult.suffix}&rdquo;
+                      </div>
+
+                      <div className={styles.clozeHintBox}>
+                        <div>
+                          <strong>Gợi ý:</strong> từ gốc <strong>{currentCard.wordContent.normalizedWord}</strong> (<em>{currentCard.wordContent.pos}</em>)
+                        </div>
+                        {currentCard.wordContent.exampleSentence?.translationVi && (
+                          <div className={styles.clozeHintTranslation}>
+                            Dịch câu: &ldquo;{currentCard.wordContent.exampleSentence.translationVi}&rdquo;
+                          </div>
+                        )}
+                      </div>
+
+                      <div className={styles.flipHint}>
+                        Nhấn <kbd className={styles.kbd}>Space</kbd> để xem đáp án dạng từ và câu đầy đủ
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={styles.clozeContainer}>
+                        <div className={styles.clozeSentenceBox}>
+                          &ldquo;{wordModeInfo.clozeResult.prefix}
+                          <span className={styles.clozeRevealed}>
+                            {wordModeInfo.clozeResult.matchedForm || wordModeInfo.clozeResult.targetForm}
+                          </span>
+                          {wordModeInfo.clozeResult.suffix}&rdquo;
+                        </div>
+
+                        <div className={styles.clozeMetaRow}>
+                          <span>Từ gốc: <strong>{currentCard.wordContent.normalizedWord}</strong></span>
+                          <span>•</span>
+                          <span>Dạng trong câu: <span className={styles.clozeRevealed}>{wordModeInfo.clozeResult.matchedForm || wordModeInfo.clozeResult.targetForm}</span></span>
+                          <span className={styles.posTag}>{currentCard.wordContent.pos}</span>
+                          {currentCard.wordContent.ipa && (
+                            <span className={styles.ipaText}>{currentCard.wordContent.ipa}</span>
+                          )}
+                          <AudioButton
+                            text={currentCard.wordContent.exampleSentence?.text || currentCard.wordContent.normalizedWord}
+                            size="sm"
+                            title="Nghe câu hoàn chỉnh (Phím R)"
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.backDivider} />
+
+                      <div className={styles.backContent}>
+                        {currentCard.wordContent.meanings.length > 0 && (
+                          <div className={styles.meaningsBox}>
+                            <div className={styles.meaningsTitle}>Nghĩa tiếng Việt:</div>
+                            <ul className={styles.meaningsList}>
+                              {currentCard.wordContent.meanings.map((m, idx) => (
+                                <li key={idx}>{m}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {currentCard.wordContent.exampleSentence?.translationVi && (
+                          <div className={styles.exampleBox}>
+                            <div className={styles.exampleVi}>
+                              {currentCard.wordContent.exampleSentence.translationVi}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </>
