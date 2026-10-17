@@ -215,6 +215,74 @@ graph TD
     SaveDB --> TriggerAudio[Kích hoạt Background Audio Queue]
 ```
 
+### 6.1. Chữ ký Hàm Tầng Nghiệp vụ (`src/services/import.service.ts`)
+
+Theo quy ước phân tầng kiến trúc tại [TECH_STACK.md](file:///d:/Antigravity/learn_languege_app/docs/TECH_STACK.md), Route Handler chỉ nhận HTTP body và ủy quyền toàn bộ cho tầng Service:
+
+```typescript
+export interface DryRunOptions {
+  overrideSeq?: number;
+}
+
+export interface ImportCommitOptions {
+  categoryMappings?: Record<string, string>; // { "wrong-verb-form": "verb-pattern" }
+  overrideSeq?: number;
+  mergeMode?: 'APPEND' | 'NEW_SESSION';
+}
+
+export interface DryRunReport {
+  isValid: boolean;
+  requiresUserAction: boolean;
+  sessionConflict?: {
+    existingSessionId: string;
+    suggestedSeq: number;
+  };
+  summary: {
+    addedWordsCount: number;
+    mergedWordsCount: number;
+    newSentencesCount: number;
+    addedMistakesCount: number;
+    skippedMistakesCount: number;
+    reappearedMistakesCount: number;
+    warningCount: number;
+    errorCount: number;
+  };
+  warnings: Array<{ path: string; message: string }>;
+  pendingMappings: Array<{
+    itemIndex: number;
+    wrongText: string;
+    unknownCategory: string;
+    suggestedOptions: Array<{ code: string; label: string }>;
+  }>;
+}
+
+export interface ImportResult {
+  importBatchId: string;
+  sessionId: string;
+  status: 'SUCCESS' | 'SKIPPED';
+  stats: {
+    wordsCreated: number;
+    wordsMerged: number;
+    sentencesCreated: number;
+    mistakesCreated: number;
+    sessionItemsCreated: number;
+    reviewStatesCreated: number;
+  };
+}
+
+export interface ImportService {
+  /**
+   * Bước 1: Tiếp nhận raw JSON, phát hiện mã lỗi lạ và tính diff so khớp CSDL
+   */
+  dryRunImport(rawPayload: string, options?: DryRunOptions): Promise<DryRunReport>;
+
+  /**
+   * Bước 2: Commit nguyên tử toàn bộ buổi học vào CSDL trong 1 transaction duy nhất
+   */
+  commitImport(rawPayload: string, options?: ImportCommitOptions): Promise<ImportResult>;
+}
+```
+
 ---
 
 ## 7. Mẫu Dữ liệu Thực tế (Fixtures)

@@ -182,6 +182,19 @@ export function getStudyDate(date: Date = new Date()): string {
   const day = String(shifted.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Tịnh tiến chuỗi ngày học YYYY-MM-DD thêm số ngày tương ứng.
+ * Sử dụng UTC arithmetic thuần túy để triệt tiêu ảnh hưởng của múi giờ địa phương.
+ */
+export function addDaysToStudyDate(studyDate: string, days: number): string {
+  const [y, m, d] = studyDate.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + days));
+  const nextY = date.getUTCFullYear();
+  const nextM = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const nextD = String(date.getUTCDate()).padStart(2, '0');
+  return `${nextY}-${nextM}-${nextD}`;
+}
 ```
 
 ### 5.2. Bảng kiểm thử đối soát mốc thời gian (Test Matrix)
@@ -290,8 +303,9 @@ export function createDatabaseBackup(prefix: string = 'backup'): string {
 
 ## 9. Câu hỏi còn mở (Open Questions)
 
-1. **Định dạng lưu trữ trường `dueDate` trong cơ sở dữ liệu:** Nên lưu dưới dạng chuỗi ngày học cục bộ `YYYY-MM-DD` (để query trực tiếp theo kết quả của `getStudyDate`) hay lưu dưới dạng timestamp UTC ISO-8601 (để đảm bảo chuẩn thời gian quốc tế). Sẽ quyết định cụ thể tại `docs/DATABASE_SCHEMA.md`.
-2. **Khả năng tương thích của `tsx` với Next.js 16 trên Node 24:** Kiểm tra xem lệnh chạy script bảo trì `npx tsx scripts/migrate.ts` có gặp cảnh báo module nào khi Next.js 16 dùng cấu hình ESM mặc định.
+1. **Khả năng tương thích của `tsx` với Next.js 16 trên Node 24:** Kiểm tra xem lệnh chạy script bảo trì `npx tsx scripts/migrate.ts` có gặp cảnh báo module nào khi Next.js 16 dùng cấu hình ESM mặc định.
+
+*(Ghi chú: Câu hỏi về định dạng `dueDate` đã được chốt là chuỗi ngày học `YYYY-MM-DD` tại [DATABASE_SCHEMA.md](file:///d:/Antigravity/learn_languege_app/docs/DATABASE_SCHEMA.md) và [SRS_ALGORITHM.md](file:///d:/Antigravity/learn_languege_app/docs/SRS_ALGORITHM.md) để query trực tiếp theo kết quả của `getStudyDate`).*
 
 ---
 
@@ -302,6 +316,7 @@ export function createDatabaseBackup(prefix: string = 'backup'): string {
 | **2026-10-17** | **Ghim Node 24 (Active LTS) trong engines và .nvmrc.** | Bản Active LTS ổn định, được Next.js 16, Prisma 7 và better-sqlite3 hỗ trợ chính thức. | Dùng Node 22 (đã vào Maintenance LTS) hoặc Node 26 (chưa chính thức LTS). |
 | **2026-10-17** | **Ghim cứng phiên bản chính xác cho toàn bộ dependencies.** | Loại bỏ ký tự `^`, cam kết `package-lock.json` và dùng `npm ci` để đảm bảo môi trường không bị thay đổi bất ngờ. | Dùng dải phiên bản lỏng lẻo (`^` hoặc `~`). |
 | **2026-10-17** | **Prisma 7 với Adapter `better-sqlite3` và lệnh `foreign_keys = ON;` tường minh.** | Tận dụng driver C++ tốc độ cao; kiểm soát minh bạch việc bật ràng buộc khóa ngoại ở tầng driver thay vì phó mặc giả định. | Sử dụng SQLite driver mặc định cũ của Prisma không qua adapter. |
-| **2026-10-17** | **Hàm `getStudyDate` tính bằng số học UTC (+3 giờ).** | Loại bỏ 100% rủi ro phụ thuộc vào múi giờ cài đặt của máy trạm; kết quả tính toán độc lập và nhất quán trên mọi môi trường. | Dùng `Date.prototype.getHours()` phụ thuộc múi giờ máy local. |
+| **2026-10-17** | **Hàm `getStudyDate` và `addDaysToStudyDate` tính bằng số học UTC (+3 giờ).** | Loại bỏ 100% rủi ro phụ thuộc vào múi giờ cài đặt của máy trạm; kết quả tính toán độc lập và nhất quán trên mọi môi trường. | Dùng `Date.prototype.getHours()` phụ thuộc múi giờ máy local. |
 | **2026-10-17** | **Quy tắc cô lập dữ liệu thật vào `data/` và `.gitignore`.** | Đảm bảo an toàn tuyệt đối khi public mã nguồn lên GitHub; chỉ commit dữ liệu giả lập trong `fixtures/`. | Lưu DB rải rác hoặc commit file DB chứa lịch sử học tập cá nhân lên repo public. |
 | **2026-10-17** | **CSS Modules + Tokens thay vì TailwindCSS.** | Tránh phụ thuộc vào công cụ tiền xử lý, tránh rủi ro vỡ cấu hình giữa Tailwind v3 và v4, giữ code CSS chuẩn mực. | Dùng TailwindCSS hoặc các thư viện CSS-in-JS có chi phí runtime. |
+| **2026-10-17** | **Lưu `dueDate` dạng chuỗi `YYYY-MM-DD`.** | Cho phép so sánh trực tiếp chuỗi ngày học với kết quả `getStudyDate(now)` mà không cần parse timestamp phức tạp hay lo lệch múi giờ. | Lưu timestamp ISO-8601 UTC. |

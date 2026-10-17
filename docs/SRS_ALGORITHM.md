@@ -16,24 +16,28 @@ Thuật toán SRS trong dự án được điều chỉnh từ SM-2 kinh điển
 | `HARD_EF_DELTA` | `-0.15` | Mức giảm Ease Factor khi bấm "Khó nhớ" | Giảm nhẹ độ dễ nhớ để từ này xuất hiện thường xuyên hơn ở các vòng sau. |
 | `REMEMBERED_EF_DELTA` | `+0.10` | Mức tăng Ease Factor khi bấm "Nhớ rõ" | Tưởng thưởng khi nhớ tốt, giúp thẻ giãn cách xa hơn ở các chu kỳ tiếp theo. |
 | `MAX_INTRA_SESSION_REQUEUES` | `3` lần | Số lần tối đa một thẻ "Quên" được xuất hiện lại trong phiên | Tránh vòng lặp vô tận gây ức chế khi người học gặp từ quá khó trong buổi học 1 giờ. |
+| `DEFAULT_MAX_NEW_WORDS_PER_DAY` | `10` thẻ | Hạn ngạch nạp từ vựng mới hằng ngày | Cân bằng lượng kiến thức mới vừa vặn trong 1 giờ học. |
+| `DEFAULT_MAX_NEW_MISTAKES_PER_DAY` | `5` thẻ | Hạn ngạch nạp lỗi sai mới hằng ngày | Đảm bảo đủ thời gian phân tích và gõ lại từng câu sai. |
+| `DEFAULT_MAX_REVIEW_WORDS_PER_DAY` | `50` thẻ | Giới hạn thẻ từ vựng ôn tập hằng ngày | Giữ thời lượng ôn từ trong khoảng 30–40 phút. |
+| `DEFAULT_MAX_REVIEW_MISTAKES_PER_DAY` | `30` thẻ | Giới hạn thẻ lỗi sai ôn tập hằng ngày | Giữ thời lượng ôn lỗi trong khoảng 20–30 phút. |
 
 ---
 
 ## 2. Kiến trúc Hai Lớp: Bộ tính Lịch ôn & Máy trạng thái Phiên học
 
-Để đảm bảo tính độc lập và khả năng kiểm thử tối đa, hệ thống phân tách rõ rệt thành hai tầng:
-- **Tầng (a): Bộ tính lịch ôn toán học thuần túy (`calculateNextReview`)**: Hoàn toàn là pure function, tính toán các chỉ số mới và `dueDate` độc lập với trạng thái giao diện.
-- **Tầng (b): Máy trạng thái phiên học (`processSessionCard`)**: Điều phối luồng học trong phiên, quản lý re-queue thẻ quên, chặn phạt lapse nhiều lần, và lưu trạng thái vào CSDL.
+Để đảm bảo tính độc lập và khả năng kiểm thử tối đa, hệ thống phân tách rõ rệt thành hai tầng tương ứng với 2 giai đoạn phát triển:
+- **Tầng (a): Bộ tính lịch ôn toán học thuần túy (`calculateNextReview`) — [Triển khai ở Lát 2a]**: Hoàn toàn là pure function, tính toán các chỉ số mới và `dueDate` độc lập với trạng thái giao diện, phục vụ Flashcard cơ bản 3 nút.
+- **Tầng (b): Máy trạng thái phiên học (`processSessionCard`) — [Triển khai ở Lát 2b]**: Điều phối luồng học trong phiên, quản lý re-queue thẻ quên, chặn phạt lapse nhiều lần, và lưu trạng thái vào CSDL `ReviewSession`.
 
 ```mermaid
 graph TD
-    UserAction[Người học chấm điểm thẻ] --> SessionSM[Tầng b: Máy trạng thái Phiên học<br/><i>Kiểm tra requeueCount & cờ lapse</i>]
-    SessionSM -->|Thẻ chưa từng lapse trong phiên| PureEngine[Tầng a: calculateNextReview<br/><i>Tính interval, EF, dueDate</i>]
+    UserAction[Người học chấm điểm thẻ] --> SessionSM[Tầng b: Máy trạng thái Phiên học - Lát 2b<br/><i>Kiểm tra requeueCount & cờ lapse</i>]
+    SessionSM -->|Thẻ chưa từng lapse trong phiên| PureEngine[Tầng a: calculateNextReview - Lát 2a<br/><i>Tính interval, EF, dueDate</i>]
     SessionSM -->|Thẻ đã lapse, re-queue thành công| LapsePass[Gán interval=1, KHÔNG tăng EF]
     SessionSM --> AtomicTx[Transaction CSDL Duy nhất<br/><i>Cập nhật ReviewState + Ghi ReviewLog + Lưu ReviewSession</i>]
 ```
 
-### 2.1. Tầng (a): Bộ tính Lịch ôn Thuần túy (`calculateNextReview`)
+### 2.1. Tầng (a): Bộ tính Lịch ôn Thuần túy (`calculateNextReview`) — [Lát 2a]
 
 #### Chữ ký hàm (Signature):
 ```typescript
@@ -83,7 +87,7 @@ export interface SrsScheduler {
 
 ---
 
-### 2.2. Tầng (b): Máy trạng thái Phiên học (`processSessionCard`)
+### 2.2. Tầng (b): Máy trạng thái Phiên học (`processSessionCard`) — [Triển khai ở Lát 2b]
 
 #### Chữ ký hàm & Kiểu dữ liệu:
 ```typescript
@@ -139,7 +143,7 @@ export function processSessionCard(
 
 ---
 
-## 3. Định nghĩa "Thẻ Mới" & Quản lý Hạn ngạch Ngày
+## 3. Định nghĩa "Thẻ Mới" & Quản lý Hạn ngạch Ngày (`StudyQuotaConfig`) — [Triển khai ở Lát 2b]
 
 ### 3.1. Tiêu chí Định danh Thẻ Mới
 - **Trạng thái ban đầu trong CSDL (`ReviewState`):**
@@ -152,15 +156,19 @@ export function processSessionCard(
 - **Định nghĩa thẻ mới:** Bản ghi `ReviewState` có trường **`lastReviewedAt IS NULL`** (chưa từng được người học chấm điểm bất kỳ lần nào).
 
 ### 3.2. Kiểm soát Hạn ngạch & Thứ tự Nạp thẻ
-- Hằng ngày, hệ thống giới hạn số lượng thẻ mới được đưa vào hàng đợi:
-  - Tối đa `maxNewWordsPerDay` thẻ từ vựng mới (mặc định: 10).
-  - Tối đa `maxNewMistakesPerDay` thẻ lỗi sai mới (mặc định: 5).
+- Hằng ngày, hệ thống giới hạn số lượng thẻ mới và thẻ ôn tập theo bảng `StudyQuotaConfig`:
+  - **Hạn ngạch thẻ mới:**
+    - Tối đa `maxNewWordsPerDay` thẻ từ vựng mới (mặc định: 10 thẻ).
+    - Tối đa `maxNewMistakesPerDay` thẻ lỗi sai mới (mặc định: 5 thẻ).
+  - **Giới hạn trần thẻ ôn tập:**
+    - Tối đa `maxReviewWordsPerDay` thẻ từ vựng đến hạn cần ôn (mặc định: 50 thẻ).
+    - Tối đa `maxReviewMistakesPerDay` thẻ lỗi sai đến hạn cần ôn (mặc định: 30 thẻ).
 - **Thứ tự nạp thẻ mới:** Ưu tiên theo thứ tự thời gian nhập liệu cũ nhất trước (`Session.week ASC, day ASC, seq ASC, Word/Mistake.createdAt ASC`).
 - Các thẻ mới vượt quá hạn ngạch ngày sẽ nằm chờ trong kho, tự động nạp vào các ngày học tiếp theo.
 
 ---
 
-## 4. Quản lý Phiên Học & Giao dịch Nguyên tử (Atomic Rating Transaction)
+## 4. Quản lý Phiên Học & Giao dịch Nguyên tử (`ReviewSession`) — [Triển khai ở Lát 2b]
 
 ### 4.1. Quy tắc Một Transaction cho Mỗi Lần Chấm Điểm
 Mỗi lần người học nhấn một nút đánh giá (*Quên / Khó nhớ / Nhớ rõ*), backend thực thi trong **duy nhất 1 database transaction (`prisma.$transaction`)**:
@@ -180,12 +188,17 @@ Mỗi lần người học nhấn một nút đánh giá (*Quên / Khó nhớ / 
 
 ## 5. Trộn Hàng Đợi & Dạng Thẻ Tương Tác
 
-### 5.1. Quy tắc Trộn Thẻ (Interleaving)
-- Hàng đợi được sắp xếp theo nguyên tắc: Thẻ trễ hạn lâu nhất ưu tiên lên trước.
-- **Tỷ lệ trộn:** Trộn xen kẽ theo tỷ lệ **2 Thẻ Từ : 1 Thẻ Lỗi**. Việc này dựa trên giả định rằng việc thay đổi liên tục giữa nhận diện từ vựng và phân tích ngữ pháp giúp kích thích tư duy chủ động.
-- **Xử lý khi một loại thẻ hết trước:** Khi toàn bộ thẻ của một loại đã được ôn hết (ví dụ: đã học xong toàn bộ thẻ lỗi sai), hệ thống sẽ **tiếp tục hiển thị toàn bộ số thẻ còn lại của loại kia** cho đến khi hàng đợi hoàn toàn kết thúc.
+### 5.1. Phân định Lộ trình Giao diện Thẻ
+- **Lát 2a (Cơ bản - Sử dụng ngay):**
+  - Thẻ Flashcard 3 nút đánh giá chuẩn (*Quên / Khó nhớ / Nhớ rõ*).
+  - Thẻ Từ vựng hiển thị Từ (mặt trước) $\rightarrow$ Nghĩa tiếng Việt & Phiên âm IPA (mặt sau).
+  - Thẻ Lỗi sai hiển thị Câu sai (mặt trước) $\rightarrow$ Câu đúng & Giải thích tiếng Việt (mặt sau).
+- **Lát 2b (Nâng cao & Bền vững):**
+  - Trộn xen kẽ hàng đợi theo tỷ lệ **2 Thẻ Từ : 1 Thẻ Lỗi** (Interleaving).
+  - Thẻ Mistake: Bắt buộc gõ lại câu đúng ở mặt trước rồi mới lật xem đáp án và diff highlight.
+  - Thẻ Word: 3 chế độ (Từ $\rightarrow$ Nghĩa, Nghĩa $\rightarrow$ Từ, Đục lỗ câu `Cloze Deletion`).
 
-### 5.2. Thẻ Đục Lỗ (`Cloze Deletion`) & Trường `Sentence.targetForm`
+### 5.2. Thẻ Đục Lỗ (`Cloze Deletion`) & Trường `Sentence.targetForm` — [Lát 2b]
 - **Cơ chế đục lỗ:** Dựa vào trường `Sentence.targetForm` trong CSDL (dạng hiển thị chính xác của từ trong câu ví dụ, ví dụ từ gốc là *achieve*, `targetForm` là *achieving*).
   - Mặt trước: Câu ví dụ bị thay thế chuỗi `targetForm` bằng `[...]`: *"I am [...] band 6.5"*.
   - Mặt sau: Hiển thị câu đầy đủ, từ vựng gốc, từ loại và phát âm.

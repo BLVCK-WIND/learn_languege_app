@@ -17,12 +17,14 @@ erDiagram
         int seq "Số thứ tự phiên"
         string contentHash "sha256(raw payload) - UNIQUE"
         string rawPayload "Nội dung JSON gốc"
+        string remappingJson "JSON lưu ánh xạ mã lỗi lạ (tùy chọn)"
         string status "SUCCESS | FAILED"
         string importedAt "Thời điểm import (ISO-8601 UTC)"
     }
 
     Session {
         string id PK "cuid(2)"
+        string importBatchId FK "Khóa ngoại trỏ tới ImportBatch (tùy chọn)"
         int week "Tuần học (>=1)"
         int day "Ngày học trong tuần (1-7)"
         int seq "Số thứ tự phiên trong ngày (mặc định 1)"
@@ -68,13 +70,14 @@ erDiagram
         string wordId FK "Khóa ngoại trỏ tới Word"
         string text "Câu ví dụ nguyên bản"
         string targetForm "Dạng hiển thị của từ trong câu (tùy chọn)"
-        string meaningVi "Dịch nghĩa tiếng Việt của câu"
+        string translationVi "Dịch nghĩa tiếng Việt của câu"
         string audioUrl "Đường dẫn file audio local"
         string audioStatus "PENDING | PROCESSING | READY | FAILED"
         string audioUpdatedAt "Thời điểm cập nhật audio gần nhất"
         int audioAttempts "Số lần đã thử tải audio (mặc định 0)"
         string contentHash "sha256(normalized text)"
         string createdAt "Thời điểm tạo"
+        string deletedAt "Thời điểm xóa mềm (null = hoạt động)"
     }
 
     Mistake {
@@ -99,7 +102,7 @@ erDiagram
         string dueDate "Ngày đến hạn học YYYY-MM-DD"
         int repetitions "Số lần trả lời đúng liên tiếp"
         int lapseCount "Số lần bị đánh giá Quên"
-        string lastReviewedAt "Lần ôn tập gần nhất (ISO-8601 UTC)"
+        string lastReviewedAt "Lần ôn tập gần nhất (DateTime?, null = thẻ mới)"
         string createdAt "Thời điểm tạo"
         string updatedAt "Thời điểm cập nhật"
     }
@@ -144,10 +147,12 @@ erDiagram
 ### 2.1. Thực thể `ImportBatch` (Nhật ký Lần Import)
 - **Mục đích:** Đóng vai trò là lớp bảo vệ chống trùng ngoài cùng (Outer Idempotency Barrier), lưu lại nguyên văn chuỗi payload từ AI tutor để phục vụ kiểm toán và đối soát dữ liệu cũ.
 - **Ràng buộc:** `contentHash` mang ràng buộc `@unique` (tính bằng `sha256(rawPayload)`).
+- **Trường `remappingJson` (tùy chọn):** Chuỗi JSON lưu trữ các quyết định ánh xạ mã lỗi lạ về 13 mã chuẩn của người học ở bước Dry-run (ví dụ: `{"wrong-verb-form": "verb-pattern"}`).
 - **Cơ chế hoạt động:** Khi người dùng dán lại một file JSON đã import trước đó, hệ thống nhận diện ngay `contentHash` trùng khớp và báo kết quả thành công tức thì mà không cần quét các bảng con.
 
 ### 2.2. Thực thể `Session` (Phiên học với AI Tutor)
 - **Mục đích:** Lưu trữ ngữ cảnh buổi học theo lộ trình 12 tháng.
+- **Khóa ngoại `importBatchId` (tùy chọn):** Trỏ tới bản ghi `ImportBatch.id` tương ứng đã tạo ra phiên này (`ON DELETE SET NULL`).
 - **Khóa tự nhiên chống trùng:** `@@unique([week, day, seq])`.
   - Một ngày có thể có nhiều phiên học khác nhau (phân biệt bằng `seq` mặc định là `1`).
   - `studiedAt`: Ghi nhận thời điểm học, không nằm trong khóa chống trùng.
@@ -179,6 +184,7 @@ erDiagram
 ### 2.5. Thực thể `Sentence` (Câu Ví dụ, Audio & Dạng từ Đục lỗ)
 - **Mục đích:** Lưu trữ câu ví dụ cho từ vựng.
 - **Trường `targetForm` (tùy chọn):** Lưu dạng chữ chính xác của từ vựng xuất hiện trong câu (ví dụ: từ vựng gốc là *achieve*, nhưng trong câu xuất hiện ở dạng quá khứ *achieved* hoặc phân từ *achieving*). Phục vụ trực tiếp cho thẻ ôn tập đục lỗ (Cloze Deletion) ở Lát 2b. Nếu không có hoặc không khớp chuỗi trong `text`, tự động rơi về Chế độ 1 hoặc 2.
+- **Trường `translationVi`:** Dịch nghĩa tiếng Việt nguyên câu của ví dụ (đồng bộ với trường `translationVi` trong payload import JSON).
 - **Khóa chống trùng:** `@@unique([wordId, contentHash])`.
   - **Lý do:** Một câu văn hay có thể dùng làm ví dụ đồng thời cho nhiều từ vựng khác nhau.
   - **Tối ưu file audio:** File âm thanh sinh ra vẫn chỉ lưu **duy nhất 1 file** trên ổ đĩa tại `/data/audio/[sha256].mp3` nhờ đặt tên theo hash nội dung.
@@ -187,6 +193,7 @@ erDiagram
   - `audioStatus`: Trạng thái tải âm thanh (`'PENDING' | 'PROCESSING' | 'READY' | 'FAILED'`).
   - `audioUpdatedAt`: Thời điểm cập nhật trạng thái audio gần nhất.
   - `audioAttempts`: Số lần đã thử tải audio (mặc định `0`).
+- **Xóa mềm:** `deletedAt: DateTime?` (`null` = hoạt động, có mốc thời gian = đã xóa mềm).
 
 ### 2.6. Thực thể `Mistake` (Nhật ký Lỗi sai & Định nghĩa Số lần mắc)
 - **Khóa chống trùng:** `contentHash` mang ràng buộc `@unique` (tính trên cặp câu sai + đúng đã chuẩn hóa).
@@ -198,6 +205,7 @@ erDiagram
 - **Mục đích:** Quản lý thông số thuật toán Modified SM-2 cho `Word` hoặc `Mistake`.
 - **Ràng buộc duy nhất:** `@@unique([itemType, itemId])`.
 - **Chỉ mục chính:** `@@index([itemType, dueDate])` tối ưu hóa việc lấy hàng đợi thẻ đến hạn trong ngày.
+- **Trường `lastReviewedAt`:** Khai báo `DateTime?` trong Prisma. Khi tạo thẻ mới từ import, giá trị ban đầu là `null`. Hệ thống nhận diện "Thẻ mới" thông qua điều kiện `lastReviewedAt IS NULL`. Sau mỗi lần người học chấm điểm thẻ, trường này được cập nhật bằng timestamp hiện tại (`now`).
 
 ### 2.8. Thực thể `ReviewLog`, `ReviewSession`, `StudyQuotaConfig`
 - `ReviewLog`: Lưu lịch sử từng lần chấm thẻ, liên kết `reviewStateId` (`ON DELETE CASCADE`).

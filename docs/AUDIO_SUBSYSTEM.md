@@ -145,7 +145,7 @@ export const audioQueue = globalThis.__audioQueue ?? (globalThis.__audioQueue = 
   - `PENDING`: Đang chờ trong hàng đợi.
   - `PROCESSING`: Đang trong tiến trình tải từ DictionaryAPI / edge-tts.
   - `READY`: Đã tải và lưu file audio cục bộ thành công.
-  - `FAILED`: Thất bại cả 3 lần retry. Giao diện hiển thị nút **"Thử lại"** (người học bấm vào sẽ reset về `PENDING`, tăng `audioAttempts` và đưa lại vào hàng đợi).
+  - `FAILED`: Thất bại khi `audioAttempts >= MAX_AUDIO_ATTEMPTS` (`MAX_AUDIO_ATTEMPTS = 3` lần retry với exponential backoff 1s, 2s, 4s). Giao diện hiển thị nút **"Thử lại"** (người học bấm vào sẽ reset về `PENDING`, tăng `audioAttempts` và đưa lại vào hàng đợi).
 - **Cơ chế Kích hoạt khi Khởi động Ứng dụng:**
   Được kích hoạt thông qua hook khởi động chuẩn của Next.js App Router tại file `src/instrumentation.ts` (chỉ chạy trong môi trường Node.js runtime):
   ```typescript

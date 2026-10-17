@@ -10,7 +10,7 @@
 ---
 
 ## 2. Triết lý Kho dữ liệu Trung tâm & Các "Cách nhìn" (Views)
-- **Kho dữ liệu duy nhất (Single Source of Truth):** Toàn bộ dữ liệu được chuẩn hóa và quản lý tập trung trong một cơ sở dữ liệu quan hệ gồm các thực thể cốt lõi: `Session`, `SessionItem`, `Word`, `Sentence`, `Mistake`, `ReviewState`, `ReviewSession`, `ReviewLog`, và sau này là `GrammarPoint`.
+- **Kho dữ liệu duy nhất (Single Source of Truth):** Toàn bộ dữ liệu được chuẩn hóa và quản lý tập trung trong một cơ sở dữ liệu quan hệ gồm các thực thể cốt lõi: `ImportBatch`, `Session`, `SessionItem`, `Word`, `WordMeaning`, `Sentence`, `Mistake`, `ReviewState`, `ReviewSession`, `ReviewLog`, `StudyQuotaConfig`, và sau này là `GrammarPoint`.
 - **Góc nhìn tự sinh (Projection Views):** Các tính năng người dùng thao tác không phải là các module lưu trữ rời rạc mà là các "lăng kính" chiếu từ kho dữ liệu trung tâm:
   - Thẻ Flashcard ôn tập (SRS) là một góc nhìn trực quan từ `ReviewState` liên kết với `Word` hoặc `Mistake`.
   - Các dạng bài tập (đục lỗ, trắc nghiệm, sắp xếp câu, sửa lỗi ở Phase B) được thuật toán tự sinh trực tiếp từ các câu trong bảng `Sentence` và các cặp câu sai/đúng trong `Mistake`.
@@ -78,12 +78,11 @@
 ---
 
 ## 5. Câu hỏi còn mở (Open Questions)
-1. **Lựa chọn gói thư viện Node `edge-tts` cụ thể:** Ở Lát 4, sẽ cần kiểm tra thực tế trên npm giữa các package (như `edge-tts-node` hoặc giao thức WebSocket thuần) để đánh giá ngày phát hành gần nhất và số issue mở trước khi ghim phiên bản.
-2. **Lựa chọn phong cách CSS ở Lát 1:** Xác định rõ việc dùng CSS Modules kết hợp CSS Variables hay Vanilla CSS thuần để tối ưu tốc độ viết giao diện mà không phá vỡ tính tùy biến.
-3. **Cơ chế lưu nhiều nghĩa cho cùng một cặp `(word, pos)`:** Khi một từ cùng từ loại nhưng có thêm nghĩa tiếng Việt hoặc sắc thái mới ở buổi học sau, sẽ gộp vào mảng các nghĩa hay tách thành bảng quan hệ riêng.
-4. **Chiến lược sao lưu ra ngoài máy tính cá nhân:** Tích hợp đẩy file sao lưu SQLite / JSON ra thư mục đồng bộ đám mây (Google Drive / OneDrive / Dropbox) hoặc private GitHub repository.
-5. **Kế hoạch nhập lại (Backfill) dữ liệu cũ:** Cách thức định dạng và nhập liệu cho các buổi học với AI tutor đã diễn ra trước khi ứng dụng được xây dựng.
-6. **Phương thức khởi động ứng dụng hàng ngày tiện lợi:** Thiết lập một script npm hoặc shortcut (file `.bat` / script desktop) để mở server và tự bật trình duyệt chỉ bằng 1 thao tác bấm.
+1. **Chiến lược sao lưu ra ngoài máy tính cá nhân:** Tích hợp đẩy file sao lưu SQLite / JSON ra thư mục đồng bộ đám mây (Google Drive / OneDrive / Dropbox) hoặc private GitHub repository.
+2. **Kế hoạch nhập lại (Backfill) dữ liệu cũ:** Cách thức định dạng và nhập liệu cho các buổi học với AI tutor đã diễn ra trước khi ứng dụng được xây dựng.
+3. **Phương thức khởi động ứng dụng hàng ngày tiện lợi:** Thiết lập một script npm hoặc shortcut (file `.bat` / script desktop) để mở server và tự bật trình duyệt chỉ bằng 1 thao tác bấm.
+
+*(Ghi chú: Các câu hỏi trước đây về chọn gói `edge-tts`, chọn CSS Modules và lưu nhiều nghĩa cho từ đã được nghiên cứu và chốt dứt khoát tại [AUDIO_SUBSYSTEM.md](file:///d:/Antigravity/learn_languege_app/docs/AUDIO_SUBSYSTEM.md), [TECH_STACK.md](file:///d:/Antigravity/learn_languege_app/docs/TECH_STACK.md) và [DATABASE_SCHEMA.md](file:///d:/Antigravity/learn_languege_app/docs/DATABASE_SCHEMA.md)).*
 
 ---
 
@@ -98,9 +97,11 @@
 | **2026-10-17** | **ReviewState đa hình `(itemType, itemId)`.** | Giúp thuật toán SRS hoàn toàn độc lập với thực thể dữ liệu; hàng đợi ôn tập thống nhất; dễ dàng mở rộng sang các loại thẻ ôn tập mới ở Phase B, C mà không phải sửa schema hay migration.<br><br>**Điểm yếu:** Không có khóa ngoại thật mức DB cho cột đa hình.<br>**Biện pháp bù đắp:** Ràng buộc `unique(itemType, itemId)`; tạo/xóa bắt buộc đi qua duy nhất một service trong cùng transaction; hàm kiểm tra orphan chỉ ghi log báo cáo, tuyệt đối không tự xóa khi chưa có xác nhận từ người dùng. | Khóa ngoại Nullable (`wordId?`, `mistakeId?`) vì đòi hỏi CHECK constraint phức tạp không khai báo được trực tiếp qua Prisma DSL. |
 | **2026-10-17** | **Import 2 bước (Dry-run & Idempotent Atomic Commit).** | Đảm bảo tính an toàn dữ liệu: người dùng thấy trước thay đổi (thêm mới, gộp, bỏ qua, lỗi) trước khi ghi; commit toàn bộ trong 1 transaction duy nhất; dán lại file cũ không sinh rác. | Import trực tiếp không qua xem trước (dễ gây hỏng dữ liệu khi AI tutor xuất sai format). |
 | **2026-10-17** | **Phát âm phân tầng (Tiered Audio).** | Tối ưu hóa chất lượng và tính khả dụng: DictionaryAPI có audio người thật cho từ; `edge-tts` có giọng AI tự nhiên cho câu dài; Web Speech API làm lưới an toàn khi offline/lỗi. | Chỉ dùng Web Speech API (giọng robot, thiếu tự nhiên); chỉ dùng cloud TTS trả phí (tốn chi phí duy trì). |
-| **2026-10-17** | **`edge-tts` chạy trên Node.js bọc sau `TtsProvider`.** | Toàn bộ dự án gói gọn trong hệ sinh thái Node/TypeScript; người dùng không cần cài đặt Python, pip hay cấu hình biến môi trường Windows PATH. | Gọi Python CLI qua sub-process (phụ thuộc môi trường Python ngoài, dễ lỗi trên Windows). |
+| **2026-10-17** | **`edge-tts` chạy trên Node.js bọc sau `TtsProvider` (ghim `node-edge-tts` v1.2.11).** | Toàn bộ dự án gói gọn trong hệ sinh thái Node/TypeScript; người dùng không cần cài đặt Python, pip hay cấu hình biến môi trường Windows PATH. | Gọi Python CLI qua sub-process (phụ thuộc môi trường Python ngoài, dễ lỗi trên Windows). |
 | **2026-10-17** | **Chu kỳ ngày SRS tính theo UTC+7, đổi ngày lúc 04:00 sáng.** | Phù hợp nhịp sinh hoạt học tập thực tế (phiên học đêm muộn trước 04:00 sáng vẫn tính cho ngày học hôm trước); lưu trữ UTC chuẩn hóa, tính toán theo giờ địa phương. | Đổi ngày lúc 00:00 nửa đêm (gây chia cắt phiên học nếu người dùng học qua 12h đêm). |
 | **2026-10-17** | **Đưa tính năng Sao lưu an toàn & Xuất/Nhập JSON lên Lát 2a.** | Đảm bảo dữ liệu thật của người dùng được bảo vệ ngay khi bắt đầu sử dụng hàng ngày; có đường lui an toàn trước mọi can thiệp kỹ thuật. | Để sao lưu ở lát cắt cuối cùng (tiềm ẩn rủi ro mất dữ liệu học tập trong quá trình dev). |
 | **2026-10-17** | **Khóa Session là `(week, day, seq)`; `studiedAt` chỉ là trường thông tin.** | Đảm bảo tính chống trùng ổn định; một ngày có thể có nhiều phiên học khác nhau phân biệt bằng `seq`; `studiedAt` mang tính ghi nhận mốc thời gian, không làm sai lệch khóa định danh. | Đưa `studiedAt` vào khóa tự nhiên (timestamp dễ gây lệch mili-giây khiến import mất tính idempotent). |
 | **2026-10-17** | **Chuẩn hóa băm Sentence & Mistake chỉ trim, gộp khoảng trắng, Unicode NFC.** | Giữ nguyên chữ hoa/thường và dấu câu nguyên bản để bảo toàn giá trị của các lỗi chính tả, viết hoa và dấu câu (`capitalization-punctuation`, `spelling`). | Chuyển toàn bộ về chữ thường hoặc xóa dấu câu khi băm (làm mất ngữ cảnh lỗi sai của câu). |
 | **2026-10-17** | **Cấm chạy `prisma migrate` trực tiếp; bắt buộc qua script sao lưu `VACUUM INTO`.** | Đảm bảo luôn có bản sao lưu CSDL nguyên vẹn, nhất quán trước khi có bất kỳ thay đổi nào về cấu trúc schema; tránh lỗi file SQLite bị lock do copy trực tiếp. | Copy file `.db` thủ công khi ứng dụng đang mở (dễ sinh file corrupt nếu SQLite đang ghi dở). |
+| **2026-10-17** | **Tách nghĩa tiếng Việt ra bảng `WordMeaning` (1-N).** | Cho phép mở rộng thêm nghĩa mới hoặc ngữ cảnh mới cho cùng một từ loại khi học qua nhiều buổi học khác nhau. | Lưu mảng chuỗi JSON trong một cột của bảng Word. |
+| **2026-10-17** | **CSS Modules + CSS Tokens thay vì TailwindCSS.** | Tránh phụ thuộc cấu hình phức tạp giữa Tailwind v3 và v4; giữ mã nguồn CSS thuần chuẩn mực, dễ bảo trì lâu dài. | Dùng TailwindCSS hoặc CSS-in-JS. |
