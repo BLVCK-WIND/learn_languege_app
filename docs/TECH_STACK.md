@@ -36,13 +36,15 @@ Các phiên bản dưới đây được kiểm tra trực tiếp từ npm regis
 | **better-sqlite3** | `13.0.3` | `npm view better-sqlite3 version` → `13.0.3` | Thư viện C++ binding SQLite đồng bộ, tốc độ cao cho Node.js |
 | **zod** | `4.6.7` | `npm view zod version` → `4.6.7` | Kiểm thực schema JSON import và DTO đầu vào |
 | **vitest** | `5.0.5` | `npm view vitest version` → `5.0.5` | Framework kiểm thử tự động dạng bảng |
-| **typescript** | `7.0.2` | `npm view typescript version` → `7.0.2` | Trình biên dịch ngôn ngữ tĩnh (`strict: true`) |
+| **typescript** | `7.0.2` | `npm view typescript version` → `7.0.2` | Trình biên dịch ngôn ngữ tĩnh (`strict: true`) *(Cần kiểm tra tương thích ở đầu Lát 1)* |
 | **tsx** | `4.23.15` | `npm view tsx version` → `4.23.15` | Trình thực thi TypeScript cho script bảo trì / migration |
 | **dotenv** | `18.0.8` | `npm view dotenv version` → `18.0.8` | Nạp biến môi trường cho các script độc lập |
-| **@types/node** | `26.6.5` | `npm view @types/node version` → `26.6.5` | Type definitions cho Node runtime |
+| **@types/node** | `24.19.2` | `npm view @types/node@24 version` → `24.19.2` | Type definitions cho Node runtime (khớp major với Node 24) |
 | **@types/better-sqlite3** | `9.6.0` | `npm view @types/better-sqlite3 version` → `9.6.0` | Type definitions cho better-sqlite3 |
 | **@types/react** | `19.3.0` | `npm view @types/react version` → `19.3.0` | Type definitions cho React |
 | **@types/react-dom** | `19.3.0` | `npm view @types/react-dom version` → `19.3.0` | Type definitions cho React DOM |
+
+*(Ghi chú kỹ thuật về TypeScript 7.0.2: Do đây là phiên bản rất mới, cần xác minh thực tế tính tương thích với Next.js 16.4, Prisma 7 và Vitest 5. Nhiệm vụ đầu Lát 1 bắt buộc chạy lệnh kiểm tra `npm run build && npx tsc --noEmit && npx vitest run` để đảm bảo hệ thống biên dịch trơn tru trước khi code tính năng).*
 
 ---
 
@@ -216,15 +218,20 @@ export const prisma = new PrismaClient({ adapter });
 ```
 
 ### 6.2. Kiểm tra thực tế hành vi Khóa ngoại (Foreign Keys)
-- **Thực tế kiểm tra:** Driver adapter `@prisma/adapter-better-sqlite3` bản `7.10.1` chỉ bọc kết nối JS do người dùng cung cấp và **không tự động gửi lệnh kích hoạt khóa ngoại**. Nếu phía ứng dụng không chạy `db.pragma('foreign_keys = ON;')`, SQLite có thể không kiểm soát ràng buộc khóa ngoại.
-- **Biện pháp bắt buộc:** Trong script khởi động ứng dụng và script kiểm tra CSDL, thực hiện kiểm tra trạng thái khóa ngoại và ghi log:
+- **Đặc tính cơ bản của SQLite:** Lệnh `PRAGMA` trong SQLite có phạm vi **theo từng kết nối riêng biệt (per-connection)**. Nghĩa là lệnh `db.pragma('foreign_keys = ON;')` chỉ có hiệu lực trên chính instance connection đó.
+- **Thực tế kiểm tra với Prisma 7:** Driver adapter `@prisma/adapter-better-sqlite3` bản `7.10.1` chỉ bọc instance `Database` mà người dùng truyền vào, **không tự động gửi lệnh kích hoạt khóa ngoại**.
+- **Cách áp dụng chuẩn:** Trong cả `src/lib/prisma.ts` và `scripts/migrate.ts`, bắt buộc phải gọi `db.pragma('foreign_keys = ON;')` ngay sau khi `new Database(...)`.
+- **Kiểm tra xác thực qua đúng PrismaClient của ứng dụng:** Để đảm bảo PrismaClient thực sự thừa hưởng kết nối đã bật khóa ngoại, kiểm tra trực tiếp qua hàm truy vấn raw của client:
   ```typescript
-  const fkStatus = db.pragma('foreign_keys', { simple: true });
-  if (fkStatus !== 1) {
-    throw new Error('LỖI NGHIÊM TRỌNG: SQLite Foreign Keys chưa được kích hoạt thành công!');
+  // Kiểm tra qua chính PrismaClient của app (kết quả trả về phải là 1)
+  const result = await prisma.$queryRaw<Array<{ foreign_keys: number }>>`PRAGMA foreign_keys;`;
+  if (!result || result[0]?.foreign_keys !== 1) {
+    throw new Error('LỖI NGHIÊM TRỌNG: PRAGMA foreign_keys qua PrismaClient không trả về 1!');
   }
   ```
-- **Nhiệm vụ đầu Lát 1:** Tiến hành cài đặt thử nghiệm gói `better-sqlite3` trên môi trường Windows của người dùng để xác nhận trình biên dịch C++ (hoặc prebuilt binary) hoạt động bình thường trước khi xây dựng schema.
+- **Nhiệm vụ đầu Lát 1:** 
+  1. Cài đặt thử nghiệm gói `better-sqlite3` trên môi trường Windows của người dùng để xác nhận binary C++ biên dịch/nạp thành công.
+  2. Chạy đoạn mã kiểm tra trên để xác thực `PRAGMA foreign_keys = 1` thông qua PrismaClient.
 
 ---
 
