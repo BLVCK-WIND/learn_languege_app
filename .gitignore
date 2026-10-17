@@ -14,7 +14,7 @@ dist/
 *.tsbuildinfo
 
 # Quy tắc Dữ liệu Cá nhân (Public Repository Safety)
-data/
+/data/
 *.db
 *.db-journal
 *.sqlite
