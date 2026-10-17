@@ -106,7 +106,7 @@ Bảng dưới đây là kim chỉ nam tiến độ cho toàn bộ dự án. Khi
 - [x] **Task 1.3:** Viết script `scripts/backup.ts` (sao lưu SQLite bằng `VACUUM INTO` ngoài transaction) và `scripts/migrate.ts` (tự động sao lưu trước khi migrate, bật tường minh `PRAGMA foreign_keys = ON;`).
 - [x] **Task 1.4:** Viết module thuần `src/lib/study-day.ts` (`getStudyDate`, `addDaysToStudyDate` tính bằng số học UTC +3 giờ mốc 04:00 AM) và module băm chuỗi chuẩn hóa SHA-256 (`src/lib/crypto/hash.ts`).
 - [x] **Task 1.5:** Xây dựng dịch vụ nhập liệu `src/services/import.service.ts` (kiểm thực Zod 2 lượt, phát hiện trường lạ, đối soát 13 mã lỗi chuẩn, xử lý xung đột Session, commit nguyên tử trong 1 transaction).
-- [ ] **Task 1.6:** Xây dựng giao diện trang Import `/import` (ô dán JSON, bảng Diff Report thêm/gộp/bỏ qua, hộp thoại ánh xạ mã lỗi, nút xác nhận lưu).
+- [x] **Task 1.6:** Xây dựng giao diện trang Import `/import` (ô dán JSON, bảng Diff Report thêm/gộp/bỏ qua, hộp thoại ánh xạ mã lỗi, nút xác nhận lưu).
 
 ### 📋 Lát 2a: Thư viện Vocab/Mistakes, Ôn tập Cơ bản, Web Speech & Sao lưu (~2 buổi) 🚀 [MỐC DÙNG ĐƯỢC VỚI DỮ LIỆU THẬT]
 - [ ] **Task 2a.1:** Giao diện Thư viện Từ vựng (`/vocab`) và Nhật ký Lỗi sai (`/mistakes`) kèm điều kiện lọc xóa mềm `where: { deletedAt: null }`.

@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import '@/styles/tokens.css';
+import { Navbar } from '@/components/Navbar';
 
 export const metadata: Metadata = {
-  title: 'Learn Language App',
-  description: 'Personal Language Learning App - IELTS 6.5',
+  title: 'Learn Language App (IELTS 6.5)',
+  description: 'Personal Local-first Language Learning Platform',
 };
 
 export default function RootLayout({
@@ -13,7 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body>{children}</body>
+      <body>
+        <Navbar />
+        {children}
+      </body>
     </html>
   );
 }
