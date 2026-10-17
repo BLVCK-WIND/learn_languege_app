@@ -90,35 +90,66 @@ Mọi trợ lý AI / AI Agent khi tham gia phát triển dự án này bắt bu�
 - Không dùng số liệu phiên bản hoặc hành vi thư viện theo "trí nhớ".
 - Khi cần khẳng định một phiên bản gói, một cú pháp Prisma, hay một hành vi driver, AI phải chạy lệnh kiểm tra thực tế trong terminal (`npm view`, `node -e`, `npx prisma ...`) và ghi nhận kết quả xác thực trước khi kết luận.
 
----
-
-## 3. Lộ trình Triển khai Phase A (Lát cắt dọc)
-
-| Lát cắt | Tên Lát cắt & Trọng tâm Kỹ thuật | Trạng thái | Mốc ý nghĩa |
-| :---: | :--- | :---: | :--- |
-| **Tài liệu** | **Hoàn thiện trọn bộ 6 file Spec & Quy tắc làm việc** | **HOÀN THÀNH** | Nền móng kiến trúc đồng bộ 100% |
-| **Lát 1** | **Nền tảng Dữ liệu, Schema Prisma & Cỗ máy Import Dry-run** | Sắp làm | Import dữ liệu buổi học vào DB an toàn |
-| **Lát 2a** | **Thư viện Vocab/Mistakes, Ôn tập Cơ bản (SM-2 Tầng a), Web Speech & Sao lưu VACUUM** | Chưa làm | 🚀 **MỐC BẮT ĐẦU DÙNG ĐƯỢC VỚI DỮ LIỆU THẬT** |
-| **Lát 2b** | **Trải nghiệm SRS Nâng cao (Tầng b), Gõ câu sai, Đục lỗ Cloze, Quota & ReviewSession** | Chưa làm | Học sâu, chống quên, lưu phiên dở dang |
-| **Lát 3** | **Nhật ký Lỗi sai chi tiết & Dashboard Thống kê IELTS (Top lỗi, xu hướng tuần)** | Chưa làm | Nhìn thấy điểm yếu ngữ pháp để khắc phục |
-| **Lát 4** | **Hệ thống Audio Chất lượng cao (DictionaryAPI, edge-tts, Singleton Queue, Cache)** | Chưa làm | Trải nghiệm phát âm tự nhiên hoàn hảo |
+### Quy tắc 7: Tự Động Cập Nhật Bảng Checklist Tiến Độ
+- Khi hoàn thành bất kỳ Task nào trong Bảng Checklist tiến độ (Mục 3), AI bắt buộc phải cập nhật trạng thái từ `- [ ]` sang `- [x]` trong file `docs/README.md`.
+- File `docs/README.md` phải được commit và push kèm theo các file code hoàn thiện của Task đó để phiên làm việc tiếp theo luôn nắm được chính xác trạng thái dự án.
 
 ---
 
-## 4. Hướng dẫn Câu lệnh / Prompt Mẫu khi Khởi động Phiên Làm việc Mới
+## 3. Bảng Checklist Tiến Độ Triển Khai Chi Tiết (Phase A Task Checklist)
 
-Khi bắt đầu một phiên làm việc mới với bất kỳ AI nào (Claude, Gemini, ChatGPT, Cursor, Copilot, v.v.), người học chỉ cần sao chép đoạn prompt mẫu dưới đây và điền lát cắt/nhiệm vụ cần làm. Đoạn prompt này được thiết kế để "khóa chặt" ngữ cảnh, ép AI đọc tài liệu gốc và không bao giờ làm lệch hướng dự án:
+Bảng dưới đây là kim chỉ nam tiến độ cho toàn bộ dự án. Khi hoàn thành mỗi Task, AI tự động đánh dấu `[x]` vào ô tương ứng:
+
+### 📋 Lát 1: Nền tảng Dữ liệu, Schema Prisma & Cỗ máy Import Dry-run (~1–2 buổi)
+- [ ] **Task 1.1:** Khởi tạo `package.json` với engines Node `>=24.11.0`, ghim cứng toàn bộ phiên bản dependencies chính xác theo [TECH_STACK.md](file:///d:/Antigravity/learn_languege_app/docs/TECH_STACK.md), cài đặt và kiểm tra biên dịch C++ native của `better-sqlite3` trên Windows.
+- [ ] **Task 1.2:** Cấu hình `prisma.config.ts`, tạo `prisma/schema.prisma` đầy đủ 11 thực thể theo [DATABASE_SCHEMA.md](file:///d:/Antigravity/learn_languege_app/docs/DATABASE_SCHEMA.md) với cú pháp CUID2 `cuid(2)`.
+- [ ] **Task 1.3:** Viết script `scripts/backup.ts` (sao lưu SQLite bằng `VACUUM INTO` ngoài transaction) và `scripts/migrate.ts` (tự động sao lưu trước khi migrate, bật tường minh `PRAGMA foreign_keys = ON;`).
+- [ ] **Task 1.4:** Viết module thuần `src/lib/study-day.ts` (`getStudyDate`, `addDaysToStudyDate` tính bằng số học UTC +3 giờ mốc 04:00 AM) và module băm chuỗi chuẩn hóa SHA-256 (`src/lib/crypto/hash.ts`).
+- [ ] **Task 1.5:** Xây dựng dịch vụ nhập liệu `src/services/import.service.ts` (kiểm thực Zod 2 lượt, phát hiện trường lạ, đối soát 13 mã lỗi chuẩn, xử lý xung đột Session, commit nguyên tử trong 1 transaction).
+- [ ] **Task 1.6:** Xây dựng giao diện trang Import `/import` (ô dán JSON, bảng Diff Report thêm/gộp/bỏ qua, hộp thoại ánh xạ mã lỗi, nút xác nhận lưu).
+
+### 📋 Lát 2a: Thư viện Vocab/Mistakes, Ôn tập Cơ bản, Web Speech & Sao lưu (~2 buổi) 🚀 [MỐC DÙNG ĐƯỢC VỚI DỮ LIỆU THẬT]
+- [ ] **Task 2a.1:** Giao diện Thư viện Từ vựng (`/vocab`) và Nhật ký Lỗi sai (`/mistakes`) kèm điều kiện lọc xóa mềm `where: { deletedAt: null }`.
+- [ ] **Task 2a.2:** Flashcard Ôn tập 3 nút (*Quên / Khó nhớ / Nhớ rõ*) với bộ tính toán toán học thuần túy Modified SM-2 (`calculateNextReview`).
+- [ ] **Task 2a.3:** Tích hợp phát âm trình duyệt Web Speech API (chờ nạp danh sách giọng `en-US`, ưu tiên giọng `localService` khi offline).
+- [ ] **Task 2a.4:** Xây dựng `src/services/backup.service.ts` hỗ trợ API Xuất / Nhập khôi phục toàn vẹn JSON và viết bộ kiểm thử khứ hồi Round-trip (`tests/backup.test.ts`).
+
+### 📋 Lát 2b: Trải nghiệm SRS Nâng cao, Thẻ Gõ Lỗi, Đục lỗ Cloze & Quota (~2 buổi)
+- [ ] **Task 2b.1:** Thẻ Mistake nâng cao (mặt trước bắt buộc gõ lại câu đúng, so khớp diff highlight trực quan phân biệt hoa/thường và dấu câu).
+- [ ] **Task 2b.2:** Thẻ Word 3 chế độ (Từ $\rightarrow$ Nghĩa, Nghĩa $\rightarrow$ Từ, Đục lỗ câu `Cloze Deletion` thông qua trường `Sentence.targetForm` kèm fallback).
+- [ ] **Task 2b.3:** Máy trạng thái trong phiên `processSessionCard` (re-queue thẻ quên tối đa 3 lần, phạt lapse 1 lần duy nhất trong phiên).
+- [ ] **Task 2b.4:** Quản lý phiên dở dang tại CSDL (`ReviewSession`), nút "Kết thúc hôm nay", tự động chuyển `ABANDONED` sau 04:00 AM.
+- [ ] **Task 2b.5:** Hạn ngạch học tập hằng ngày `StudyQuotaConfig` (từ mới, lỗi mới, trần ôn tập) và thuật toán trộn xen kẽ 2 Từ : 1 Lỗi (Interleaving).
+
+### 📋 Lát 3: Nhật ký Lỗi sai Chi tiết & Dashboard Thống kê IELTS (~1–2 buổi)
+- [ ] **Task 3.1:** Bộ lọc danh sách lỗi theo 13 mã danh mục chuẩn kebab-case và hiển thị ngữ cảnh câu sai/đúng.
+- [ ] **Task 3.2:** Dashboard phân tích: Thống kê Top 5 lỗi hay gặp, biểu đồ xu hướng lỗi theo tuần gom nhóm theo `SessionItem` (đếm đúng tần suất thực tế, không đếm dòng `Mistake`).
+
+### 📋 Lát 4: Hệ thống Audio Chất lượng cao & Hàng đợi Tải ngầm (~2 buổi)
+- [ ] **Task 4.1:** Bọc thư viện `node-edge-tts` (v1.2.11, cấu hình bắt buộc `voice: 'en-US-AriaNeural'`, `lang: 'en-US'`, ghi nguyên tử `.tmp`) sau interface `TtsProvider`.
+- [ ] **Task 4.2:** Tích hợp tải phát âm từ điển chuẩn qua `DictionaryAPI` (ưu tiên lấy audio `-us.mp3`).
+- [ ] **Task 4.3:** Hàng đợi tải ngầm Singleton trên `globalThis.__audioQueue`, polling tiến độ mỗi 2s, hook tự phục hồi khi khởi động `src/instrumentation.ts`.
+- [ ] **Task 4.4:** Tuyến Route Handler phục vụ audio stream `/api/audio/[filename]`, quy tắc băm tên file kèm `source`, regex an toàn chống Path Traversal, header `Cache-Control` dài hạn.
+
+---
+
+## 4. Hướng dẫn Câu lệnh / Prompt Mẫu Chuẩn Cho Mọi Phiên Làm Việc Mới
+
+Khi bắt đầu một phiên làm việc mới với bất kỳ AI nào (Claude, Gemini, ChatGPT, Cursor, Copilot, v.v.), người học **chỉ cần copy & paste đoạn prompt mẫu dưới đây**. AI sẽ tự động đọc checklist, tìm Task chưa làm tiếp theo và báo cáo cho bạn:
 
 ```markdown
-Chào bạn, chúng ta tiếp tục phát triển dự án Learn Language App (IELTS 6.5, local-first web app chạy trên Next.js App Router, SQLite, Prisma ORM).
+Chào bạn, chúng ta tiếp tục phát triển dự án Learn Language App (IELTS 6.5, local-first single-user web app chạy trên Next.js App Router, SQLite + Prisma 7 adapter better-sqlite3). Toàn bộ kiến trúc và quy ước kỹ thuật đã được đóng băng trong thư mục `docs/`.
 
 TRƯỚC KHI LÀM BẤT KỲ ĐIỀU GÌ, BẠN BẮT BUỘC PHẢI THỰC HIỆN CÁC BƯỚC SAU:
-1. Đọc file `docs/README.md` để nắm toàn bộ 6 quy tắc bất khả xâm phạm và mục lục dự án.
-2. Đọc kỹ file đặc tả liên quan đến nhiệm vụ hôm nay trong thư mục `docs/`.
-3. Tuân thủ tuyệt đối các quyết định kỹ thuật trong bảng Nhật ký Quyết định (ADR) của các file spec. Không tự ý thay đổi kiến trúc hoặc thư viện (Node 24, Next.js 16.4.2, Prisma 7.10.1, better-sqlite3 13.0.3, CSS Modules, Zod, Vitest).
-4. KHÔNG tự ý tạo file hoặc viết mã nguồn ngoài phạm vi nhiệm vụ được giao.
-5. Sau mỗi lần sửa đổi hoặc tạo file, hãy chạy git add, git commit và git push origin main.
+1. Đọc file `docs/README.md` để nắm rõ 7 quy tắc bất khả xâm phạm và Bảng Checklist tiến độ tại Mục 3.
+2. Chạy `git status` và `git log -n 2` để kiểm tra trạng thái thực tế của codebase.
+3. Tìm Task đầu tiên chưa được đánh dấu hoàn thành (`- [ ]`) trong Bảng Checklist tiến độ của Lát cắt hiện tại.
+4. Đọc kỹ file spec liên quan đến Task đó trong thư mục `docs/` (tuân thủ tuyệt đối các quyết định kỹ thuật trong bảng ADR).
+5. Chia nhỏ Task thành các bước vi mô (micro-steps), nêu rõ các điểm nghi vấn/thắc mắc kỹ thuật (nếu có) và DỪNG LẠI CHỜ MÌNH PHÊ DUYỆT. Tuyệt đối CHƯA tự ý viết code khi mình chưa xác nhận kế hoạch!
+6. Sau khi được duyệt và hoàn thành code của Task:
+   - Chạy test xác nhận mọi thứ hoạt động trơn tru.
+   - Cập nhật file `docs/README.md` đổi trạng thái Task đó từ `- [ ]` sang `- [x]`.
+   - Kiểm tra `git status`, commit với message chuẩn mực và push lên `origin main`.
 
-Nhiệm vụ cụ thể của phiên hôm nay:
-[ĐIỀN NHIỆM VỤ CỤ THỂ VÀO ĐÂY, VÍ DỤ: "Triển khai Lát 1: Cài đặt dependencies, cấu hình Prisma 7 với adapter better-sqlite3, viết schema.prisma và script migrate có backup"]
+Bây giờ, hãy đọc `docs/README.md`, kiểm tra git log và cho mình biết Task tiếp theo cần làm là gì kèm kế hoạch thực hiện!
 ```
