@@ -127,7 +127,7 @@ Bảng dưới đây là kim chỉ nam tiến độ cho toàn bộ dự án. Khi
 
 ### 📋 Lát 4: Hệ thống Audio Chất lượng cao & Hàng đợi Tải ngầm (~2 buổi)
 - [x] **Task 4.1:** Bọc thư viện `node-edge-tts` (v1.2.11, cấu hình bắt buộc `voice: 'en-US-AriaNeural'`, `lang: 'en-US'`, ghi nguyên tử `.tmp`) sau interface `TtsProvider`.
-- [ ] **Task 4.2:** Tích hợp tải phát âm từ điển chuẩn qua `DictionaryAPI` (ưu tiên lấy audio `-us.mp3`).
+- [x] **Task 4.2:** Tích hợp tải phát âm từ điển chuẩn qua `DictionaryAPI` (ưu tiên lấy audio `-us.mp3`).
 - [ ] **Task 4.3:** Hàng đợi tải ngầm Singleton trên `globalThis.__audioQueue`, polling tiến độ mỗi 2s, hook tự phục hồi khi khởi động `src/instrumentation.ts`.
 - [ ] **Task 4.4:** Tuyến Route Handler phục vụ audio stream `/api/audio/[filename]`, quy tắc băm tên file kèm `source`, regex an toàn chống Path Traversal, header `Cache-Control` dài hạn.
 

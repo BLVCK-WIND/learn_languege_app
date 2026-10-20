@@ -39,7 +39,11 @@ describe('Vocab & Mistakes Services - Soft Delete & Frequency Specs (Task 2a.1)'
   afterEach(async () => {
     await testPrisma.$disconnect();
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      } catch {
+        // Tránh gián đoạn test suite trên Windows do file lock tạm thời của better-sqlite3
+      }
     }
   });
 
