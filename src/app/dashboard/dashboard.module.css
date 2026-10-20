@@ -1,0 +1,471 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.titleArea h1 {
+  margin: 0 0 var(--space-1) 0;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.refreshBtn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+}
+
+/* Metric Cards */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.metricCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.metricCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.metricIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.iconBlue {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+.iconAmber {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
+}
+
+.iconRed {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.iconGreen {
+  background: var(--color-success-subtle);
+  color: var(--color-success);
+}
+
+.metricContent {
+  display: flex;
+  flex-direction: column;
+}
+
+.metricValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.metricLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.metricSubtext {
+  font-size: 0.725rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* Main Grid Layout */
+.mainGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.sectionCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sectionSubtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* Top Categories Progress Bars */
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.categoryItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.categoryMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.875rem;
+}
+
+.categoryLabelGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.categoryRank {
+  font-weight: 700;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  min-width: 18px;
+}
+
+.categoryName {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.categoryCode {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.categoryCountsGroup {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.categoryCount {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.categoryPercentage {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.progressBarContainer {
+  width: 100%;
+  height: 8px;
+  background: var(--color-surface-hover);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+  transition: width 0.4s ease-out;
+}
+
+/* Weekly Trend Bar Chart */
+.chartContainer {
+  display: flex;
+  flex-direction: column;
+  height: 240px;
+  justify-content: flex-end;
+  padding-top: var(--space-4);
+}
+
+.chartBarsArea {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 180px;
+  border-bottom: 2px solid var(--color-border);
+  padding: 0 var(--space-2);
+  gap: var(--space-3);
+}
+
+.chartCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 60px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.chartBarValue {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.chartBar {
+  width: 100%;
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  min-height: 4px;
+  transition: height 0.4s ease-out;
+}
+
+.chartBar:hover {
+  filter: brightness(1.1);
+}
+
+.chartBarLabel {
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Full Width Sections */
+.fullWidthGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+}
+
+/* Top Mistakes Cards */
+.topMistakesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.topMistakeCard {
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.topMistakeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topMistakeCategory {
+  font-size: 0.775rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+
+.freqBadge {
+  background: var(--color-danger-subtle);
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.sentenceSnippet {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.wrongSnippet {
+  color: #991b1b;
+  text-decoration: line-through;
+  text-decoration-color: var(--color-danger);
+}
+
+.correctSnippet {
+  color: #166534;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* Recent Mistakes */
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.recentCard {
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.recentMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.775rem;
+  color: var(--color-text-secondary);
+}
+
+.recentSessionBadge {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  border: 1px solid #bfdbfe;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+/* Empty State */
+.emptyState {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.emptyState h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+}
+
+.emptyState p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  max-width: 460px;
+}
+
+.primaryLink {
+  display: inline-block;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.primaryLink:hover {
+  background: var(--color-primary-hover);
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+  .fullWidthGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+}

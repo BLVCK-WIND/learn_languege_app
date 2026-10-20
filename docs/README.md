@@ -123,7 +123,7 @@ Bảng dưới đây là kim chỉ nam tiến độ cho toàn bộ dự án. Khi
 
 ### 📋 Lát 3: Nhật ký Lỗi sai Chi tiết & Dashboard Thống kê IELTS (~1–2 buổi)
 - [x] **Task 3.1:** Bộ lọc danh sách lỗi theo 13 mã danh mục chuẩn kebab-case và hiển thị ngữ cảnh câu sai/đúng.
-- [ ] **Task 3.2:** Dashboard phân tích: Thống kê Top 5 lỗi hay gặp, biểu đồ xu hướng lỗi theo tuần gom nhóm theo `SessionItem` (đếm đúng tần suất thực tế, không đếm dòng `Mistake`).
+- [x] **Task 3.2:** Dashboard phân tích: Thống kê Top 5 lỗi hay gặp, biểu đồ xu hướng lỗi theo tuần gom nhóm theo `SessionItem` (đếm đúng tần suất thực tế, không đếm dòng `Mistake`).
 
 ### 📋 Lát 4: Hệ thống Audio Chất lượng cao & Hàng đợi Tải ngầm (~2 buổi)
 - [ ] **Task 4.1:** Bọc thư viện `node-edge-tts` (v1.2.11, cấu hình bắt buộc `voice: 'en-US-AriaNeural'`, `lang: 'en-US'`, ghi nguyên tử `.tmp`) sau interface `TtsProvider`.
