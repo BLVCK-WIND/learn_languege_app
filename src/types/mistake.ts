@@ -16,6 +16,16 @@ export interface MistakeReviewStateDTO {
   lastReviewedAt: Date | null;
 }
 
+export interface MistakeSessionDTO {
+  sessionId: string;
+  week: number;
+  day: number;
+  seq: number;
+  checkpoint: string;
+  studiedAt: Date;
+  role: string;
+}
+
 export interface MistakeItemDTO {
   id: string;
   wrong: string;
@@ -26,6 +36,7 @@ export interface MistakeItemDTO {
   createdAt: Date;
   updatedAt: Date;
   frequency: number;
+  sessions: MistakeSessionDTO[];
   reviewState: MistakeReviewStateDTO | null;
 }
 
@@ -35,4 +46,6 @@ export interface MistakeListResponse {
   page: number;
   pageSize: number;
   totalPages: number;
+  categoryCounts: Record<string, number>;
 }
+

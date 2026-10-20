@@ -79,7 +79,7 @@ describe('Vocab & Mistakes API Route Handlers (Unit & Contract)', () => {
   });
 
   describe('GET & DELETE /api/mistakes', () => {
-    it('handles GET /api/mistakes with query parameters', async () => {
+    it('handles GET /api/mistakes with query parameters, session context and categoryCounts', async () => {
       const mockResult = {
         items: [
           {
@@ -92,6 +92,17 @@ describe('Vocab & Mistakes API Route Handlers (Unit & Contract)', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             frequency: 2,
+            sessions: [
+              {
+                sessionId: 'sess_1',
+                week: 1,
+                day: 1,
+                seq: 1,
+                checkpoint: 'Buổi 1',
+                studiedAt: new Date(),
+                role: 'INTRODUCED',
+              },
+            ],
             reviewState: null,
           },
         ],
@@ -99,6 +110,9 @@ describe('Vocab & Mistakes API Route Handlers (Unit & Contract)', () => {
         page: 1,
         pageSize: 20,
         totalPages: 1,
+        categoryCounts: {
+          'word-choice': 1,
+        },
       };
 
       const spy = vi.spyOn(mistakeService, 'getMistakesList').mockResolvedValue(mockResult);
@@ -111,6 +125,9 @@ describe('Vocab & Mistakes API Route Handlers (Unit & Contract)', () => {
       expect(json.success).toBe(true);
       expect(json.data.total).toBe(1);
       expect(json.data.items[0].frequency).toBe(2);
+      expect(json.data.items[0].sessions).toHaveLength(1);
+      expect(json.data.items[0].sessions[0].checkpoint).toBe('Buổi 1');
+      expect(json.data.categoryCounts['word-choice']).toBe(1);
       expect(spy).toHaveBeenCalledWith({
         search: undefined,
         category: 'word-choice',

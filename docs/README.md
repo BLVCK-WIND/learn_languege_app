@@ -122,7 +122,7 @@ Bảng dưới đây là kim chỉ nam tiến độ cho toàn bộ dự án. Khi
 - [x] **Task 2b.5:** Hạn ngạch học tập hằng ngày `StudyQuotaConfig` (từ mới, lỗi mới, trần ôn tập) và thuật toán trộn xen kẽ 2 Từ : 1 Lỗi (Interleaving).
 
 ### 📋 Lát 3: Nhật ký Lỗi sai Chi tiết & Dashboard Thống kê IELTS (~1–2 buổi)
-- [ ] **Task 3.1:** Bộ lọc danh sách lỗi theo 13 mã danh mục chuẩn kebab-case và hiển thị ngữ cảnh câu sai/đúng.
+- [x] **Task 3.1:** Bộ lọc danh sách lỗi theo 13 mã danh mục chuẩn kebab-case và hiển thị ngữ cảnh câu sai/đúng.
 - [ ] **Task 3.2:** Dashboard phân tích: Thống kê Top 5 lỗi hay gặp, biểu đồ xu hướng lỗi theo tuần gom nhóm theo `SessionItem` (đếm đúng tần suất thực tế, không đếm dòng `Mistake`).
 
 ### 📋 Lát 4: Hệ thống Audio Chất lượng cao & Hàng đợi Tải ngầm (~2 buổi)

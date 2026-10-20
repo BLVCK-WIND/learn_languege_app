@@ -4,6 +4,7 @@ import type {
   MistakeFilterParams,
   MistakeListResponse,
   MistakeItemDTO,
+  MistakeSessionDTO,
 } from '@/types/mistake';
 
 export class DefaultMistakeService {
@@ -11,7 +12,8 @@ export class DefaultMistakeService {
 
   /**
    * Lấy danh sách lỗi sai kèm điều kiện lọc xóa mềm (where: { deletedAt: null }),
-   * tính toán tần suất mắc lỗi chính xác qua bảng SessionItem và gắn ReviewState SRS.
+   * tính toán tần suất mắc lỗi chính xác qua bảng SessionItem, gắn ngữ cảnh buổi học (Session Context),
+   * trạng thái ReviewState SRS và thống kê số lượng lỗi theo từng danh mục chuẩn.
    */
   async getMistakesList(
     params: MistakeFilterParams = {}
@@ -37,7 +39,7 @@ export class DefaultMistakeService {
       ];
     }
 
-    const [total, mistakes] = await Promise.all([
+    const [total, mistakes, categoryGroups] = await Promise.all([
       this.prisma.mistake.count({
         where: whereCondition,
       }),
@@ -47,21 +49,37 @@ export class DefaultMistakeService {
         skip,
         take: pageSize,
       }),
+      this.prisma.mistake.groupBy({
+        by: ['category'],
+        where: {
+          deletedAt: null,
+        },
+        _count: {
+          id: true,
+        },
+      }),
     ]);
 
     const mistakeIds = mistakes.map((m) => m.id);
 
     // Tính tần suất xuất hiện thực tế qua SessionItem (chuẩn hóa theo ADR: không đếm dòng Mistake)
+    // và lấy ngữ cảnh buổi học thực tế (Session Context: week, day, seq, checkpoint, role)
     const frequencyMap = new Map<string, number>();
+    const sessionMap = new Map<string, MistakeSessionDTO[]>();
     if (mistakeIds.length > 0) {
       const sessionItems = await this.prisma.sessionItem.findMany({
         where: {
           itemType: 'MISTAKE',
           itemId: { in: mistakeIds },
         },
-        select: {
-          itemId: true,
+        include: {
+          session: true,
         },
+        orderBy: [
+          { session: { week: 'asc' } },
+          { session: { day: 'asc' } },
+          { session: { seq: 'asc' } },
+        ],
       });
 
       for (const item of sessionItems) {
@@ -69,6 +87,17 @@ export class DefaultMistakeService {
           item.itemId,
           (frequencyMap.get(item.itemId) || 0) + 1
         );
+        const sessions = sessionMap.get(item.itemId) || [];
+        sessions.push({
+          sessionId: item.sessionId,
+          week: item.session.week,
+          day: item.session.day,
+          seq: item.session.seq,
+          checkpoint: item.session.checkpoint,
+          studiedAt: item.session.studiedAt,
+          role: item.role,
+        });
+        sessionMap.set(item.itemId, sessions);
       }
     }
 
@@ -97,6 +126,7 @@ export class DefaultMistakeService {
         createdAt: mistake.createdAt,
         updatedAt: mistake.updatedAt,
         frequency: frequencyMap.get(mistake.id) || 0,
+        sessions: sessionMap.get(mistake.id) || [],
         reviewState: rs
           ? {
               interval: rs.interval,
@@ -110,6 +140,11 @@ export class DefaultMistakeService {
       };
     });
 
+    const categoryCounts: Record<string, number> = {};
+    for (const group of categoryGroups) {
+      categoryCounts[group.category] = group._count.id;
+    }
+
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     return {
@@ -118,6 +153,7 @@ export class DefaultMistakeService {
       page,
       pageSize,
       totalPages,
+      categoryCounts,
     };
   }
 

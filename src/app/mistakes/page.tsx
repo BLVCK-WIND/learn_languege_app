@@ -1,11 +1,56 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import styles from './mistakes.module.css';
 import type { MistakeItemDTO, MistakeListResponse } from '@/types/mistake';
 import { MISTAKE_CATEGORY_LABELS, type MistakeCategoryType } from '@/types/import';
 import { AudioButton } from '@/components/AudioButton';
+import { compareMistakeSentence } from '@/lib/diff';
+
+function MistakeSentenceDiff({ wrong, correct }: { wrong: string; correct: string }) {
+  const diff = useMemo(() => compareMistakeSentence(wrong, correct), [wrong, correct]);
+
+  return (
+    <div className={styles.comparisonBox}>
+      <div className={`${styles.sentenceRow} ${styles.wrongRow}`}>
+        <span className={styles.sentenceIcon} title="Câu sai thực tế">❌</span>
+        <div className={styles.sentenceDiffWrapper}>
+          <span className={styles.rowTypeBadge}>Sai</span>
+          <span className={styles.sentenceContent}>
+            {diff.userChunks.map((chunk, idx) =>
+              chunk.isError ? (
+                <mark key={idx} className={styles.diffError} title="Từ / ký tự lỗi">
+                  {chunk.value}
+                </mark>
+              ) : (
+                <span key={idx}>{chunk.value}</span>
+              )
+            )}
+          </span>
+        </div>
+      </div>
+      <div className={`${styles.sentenceRow} ${styles.correctRow}`}>
+        <span className={styles.sentenceIcon} title="Câu chuẩn xác">✅</span>
+        <div className={styles.sentenceDiffWrapper} style={{ flex: 1 }}>
+          <span className={styles.rowTypeBadge}>Đúng</span>
+          <span className={styles.sentenceContent}>
+            {diff.targetChunks.map((chunk, idx) =>
+              chunk.isMissingOrChanged ? (
+                <mark key={idx} className={styles.diffSuccess} title="Từ / ký tự sửa đúng">
+                  {chunk.value}
+                </mark>
+              ) : (
+                <span key={idx}>{chunk.value}</span>
+              )
+            )}
+          </span>
+        </div>
+        <AudioButton text={correct} size="sm" title="Nghe phát âm câu đúng" />
+      </div>
+    </div>
+  );
+}
 
 export default function MistakesPage() {
   const [data, setData] = useState<MistakeListResponse | null>(null);
@@ -53,6 +98,11 @@ export default function MistakesPage() {
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCategory(e.target.value);
+    setPage(1);
+  };
+
+  const handleCategorySelect = (selectedCat: string) => {
+    setCategory((prev) => (prev === selectedCat ? 'all' : selectedCat));
     setPage(1);
   };
 
@@ -142,6 +192,51 @@ export default function MistakesPage() {
         )}
       </div>
 
+      {/* Category Filter Chips Bar */}
+      <div className={styles.categoryChipsContainer}>
+        <div className={styles.categoryChipsLabel}>
+          <span>🏷️ Lọc nhanh theo 13 danh mục chuẩn (kebab-case)</span>
+          {category !== 'all' && (
+            <button
+              type="button"
+              className={styles.resetBtn}
+              style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+              onClick={handleResetFilters}
+            >
+              Xem tất cả
+            </button>
+          )}
+        </div>
+        <div className={styles.categoryChipsScroll}>
+          <button
+            type="button"
+            className={`${styles.filterChip} ${category === 'all' ? styles.filterChipActive : ''}`}
+            onClick={() => handleCategorySelect('all')}
+          >
+            <span>Tất cả</span>
+            <span className={styles.chipCount}>{data?.total || 0}</span>
+          </button>
+          {Object.entries(MISTAKE_CATEGORY_LABELS).map(([catKey, label]) => {
+            const count = data?.categoryCounts?.[catKey] || 0;
+            const isSelected = category === catKey;
+            return (
+              <button
+                key={catKey}
+                type="button"
+                className={`${styles.filterChip} ${isSelected ? styles.filterChipActive : ''}`}
+                onClick={() => handleCategorySelect(catKey)}
+                title={`${label} (${catKey})`}
+              >
+                <span>{label}</span>
+                <span className={`${styles.chipCount} ${count > 0 ? styles.chipCountPositive : ''}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Main Content */}
       {loading ? (
         <div className={styles.emptyState}>
@@ -201,18 +296,37 @@ export default function MistakesPage() {
                     </button>
                   </div>
 
-                  {/* Comparison Box */}
-                  <div className={styles.comparisonBox}>
-                    <div className={`${styles.sentenceRow} ${styles.wrongRow}`}>
-                      <span className={styles.sentenceIcon}>❌</span>
-                      <span className={styles.sentenceText}>{mistake.wrong}</span>
+                  {/* Word-level Visual Diff Highlight Comparison */}
+                  <MistakeSentenceDiff wrong={mistake.wrong} correct={mistake.correct} />
+
+                  {/* Session Context */}
+                  {mistake.sessions && mistake.sessions.length > 0 && (
+                    <div className={styles.sessionContextBox}>
+                      <div className={styles.sessionContextLabel}>
+                        <span>📍 Ngữ cảnh buổi học:</span>
+                      </div>
+                      <div className={styles.sessionChips}>
+                        {mistake.sessions.map((sess, idx) => (
+                          <span
+                            key={`${sess.sessionId}-${idx}`}
+                            className={`${styles.sessionChip} ${
+                              sess.role === 'INTRODUCED'
+                                ? styles.sessionIntroduced
+                                : styles.sessionReappeared
+                            }`}
+                            title={`Ghi nhận ngày ${new Date(sess.studiedAt).toLocaleDateString('vi-VN')}`}
+                          >
+                            {sess.role === 'INTRODUCED' ? '🆕 ' : '🔄 '}
+                            <strong>
+                              Tuần {sess.week}, Ngày {sess.day} (Buổi {sess.seq})
+                            </strong>
+                            {sess.checkpoint ? ` — ${sess.checkpoint}` : ''}
+                            {sess.role === 'INTRODUCED' ? ' (Lần đầu)' : ' (Tái diễn)'}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className={`${styles.sentenceRow} ${styles.correctRow}`}>
-                      <span className={styles.sentenceIcon}>✅</span>
-                      <span className={styles.sentenceText} style={{ flex: 1 }}>{mistake.correct}</span>
-                      <AudioButton text={mistake.correct} size="sm" title="Nghe phát âm câu đúng" />
-                    </div>
-                  </div>
+                  )}
 
                   {/* Explanation */}
                   <div className={styles.explanationBox}>

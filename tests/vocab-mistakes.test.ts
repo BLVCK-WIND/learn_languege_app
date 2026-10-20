@@ -267,5 +267,89 @@ describe('Vocab & Mistakes Services - Soft Delete & Frequency Specs (Task 2a.1)'
       expect(searchRes.total).toBe(1);
       expect(searchRes.items[0].wrong).toContain('apple');
     });
+
+    it('populates session context and computes categoryCounts across standard categories (Task 3.1)', async () => {
+      // 1. Create a session with checkpoint
+      const session = await testPrisma.session.create({
+        data: {
+          week: 2,
+          day: 3,
+          seq: 1,
+          checkpoint: 'IELTS Writing Task 2 - Environment',
+          studiedAt: new Date('2026-10-15T08:00:00Z'),
+        },
+      });
+
+      // 2. Create mistakes across categories (including an active and a soft-deleted one)
+      const mistakePreposition = await testPrisma.mistake.create({
+        data: {
+          wrong: 'He is interested on art.',
+          correct: 'He is interested in art.',
+          category: 'preposition',
+          explanationVi: 'Interested đi với giới từ in.',
+          contentHash: 'hash-prep',
+        },
+      });
+
+      const mistakeTense = await testPrisma.mistake.create({
+        data: {
+          wrong: 'I go to London last year.',
+          correct: 'I went to London last year.',
+          category: 'tense',
+          explanationVi: 'Dùng quá khứ đơn với last year.',
+          contentHash: 'hash-tense',
+        },
+      });
+
+      // Soft-deleted mistake should NOT be included in categoryCounts
+      await testPrisma.mistake.create({
+        data: {
+          wrong: 'She play tennis.',
+          correct: 'She plays tennis.',
+          category: 'subject-verb-agreement',
+          explanationVi: 'Ngôi thứ 3 số ít thêm s.',
+          contentHash: 'hash-sva-deleted',
+          deletedAt: new Date(),
+        },
+      });
+
+      // 3. Link mistakePreposition to session
+      await testPrisma.sessionItem.create({
+        data: {
+          sessionId: session.id,
+          itemType: 'MISTAKE',
+          itemId: mistakePreposition.id,
+          role: 'INTRODUCED',
+        },
+      });
+
+      // 4. Retrieve list
+      const list = await mistakeService.getMistakesList();
+      expect(list.total).toBe(2);
+
+      // Verify categoryCounts
+      expect(list.categoryCounts['preposition']).toBe(1);
+      expect(list.categoryCounts['tense']).toBe(1);
+      // Soft-deleted category should not be in counts
+      expect(list.categoryCounts['subject-verb-agreement']).toBeUndefined();
+
+      // Find mistakePreposition item and verify its session context
+      const prepItem = list.items.find((item) => item.id === mistakePreposition.id);
+      expect(prepItem).toBeDefined();
+      expect(prepItem!.sessions).toHaveLength(1);
+      expect(prepItem!.sessions[0].week).toBe(2);
+      expect(prepItem!.sessions[0].day).toBe(3);
+      expect(prepItem!.sessions[0].seq).toBe(1);
+      expect(prepItem!.sessions[0].checkpoint).toBe('IELTS Writing Task 2 - Environment');
+      expect(prepItem!.sessions[0].role).toBe('INTRODUCED');
+      expect(prepItem!.frequency).toBe(1);
+
+      // Verify mistakeTense has empty sessions array if not linked
+      const tenseItem = list.items.find((item) => item.id === mistakeTense.id);
+      expect(tenseItem).toBeDefined();
+      expect(tenseItem!.sessions).toHaveLength(0);
+      expect(tenseItem!.frequency).toBe(0);
+    });
   });
 });
+
